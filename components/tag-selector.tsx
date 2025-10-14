@@ -47,6 +47,13 @@ export function TagSelector({
   const [inputValue, setInputValue] = useState("");
   const [availableTags, setAvailableTags] = useState<TagData[]>([]);
 
+  // Normaliza strings para busca (case-insensitive e sem acentos)
+  const normalize = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
   // Assinar tags do Firestore por usuário
   useEffect(() => {
     const userId = user?.id;
@@ -72,27 +79,28 @@ export function TagSelector({
     return () => unsubscribe();
   }, [user?.id]);
 
-  // Filtrar tags que não estão selecionadas e que correspondem ao input
+  // Filtrar por seleção (e texto via inputValue para garantir busca robusta)
   const unselectedTags = availableTags.filter((tag) => {
-    const matchesInput = tag.name
-      .toLowerCase()
-      .includes(inputValue.toLowerCase());
+    const selectedLower = selectedTags.map((t) => t.toLowerCase());
     const isSelected =
       mode === "id"
-        ? selectedTags.includes(tag.id)
-        : selectedTags
-            .map((t) => t.toLowerCase())
-            .includes(tag.name.toLowerCase());
-    return !isSelected && matchesInput;
+        ? selectedTags.includes(tag.id) ||
+          selectedLower.includes(tag.name.toLowerCase())
+        : selectedLower.includes(tag.name.toLowerCase());
+    return !isSelected;
   });
+
+  const filteredTags = React.useMemo(() => {
+    const q = normalize(inputValue.trim());
+    if (!q) return unselectedTags;
+    return unselectedTags.filter((t) => normalize(t.name).includes(q));
+  }, [inputValue, unselectedTags]);
 
   // Verificar se o input é uma nova tag
   const isNewTag =
     inputValue.trim().length > 0 &&
-    !availableTags.some(
-      (tag) => tag.name.toLowerCase() === inputValue.toLowerCase()
-    ) &&
-    !selectedTags.some((tag) => tag.toLowerCase() === inputValue.toLowerCase());
+    !availableTags.some((tag) => normalize(tag.name) === normalize(inputValue)) &&
+    !selectedTags.map((t) => normalize(t)).includes(normalize(inputValue));
 
   // Adicionar tag
   const addTag = async (tagName: string) => {
@@ -129,7 +137,10 @@ export function TagSelector({
 
     // Evitar duplicados
     if (mode === "id") {
+      const selectedLower = selectedTags.map((t) => t.toLowerCase());
       if (selectedTags.includes(selectedValue)) return;
+      // Evita duplicar quando selectedTags temporariamente contém nomes legados
+      if (selectedLower.includes(trimmedName.toLowerCase())) return;
     } else {
       if (
         selectedTags
@@ -141,6 +152,7 @@ export function TagSelector({
 
     onTagsChange([...selectedTags, selectedValue]);
     setInputValue("");
+    setOpen(false);
   };
 
   // Remover tag
@@ -151,8 +163,9 @@ export function TagSelector({
 
   // Lidar com seleção de comando
   const handleSelect = (value: string) => {
-    if (value === "create-new") {
-      addTag(inputValue);
+    if (value.startsWith("create-new:")) {
+      const name = value.slice("create-new:".length);
+      addTag(name);
     } else {
       addTag(value);
     }
@@ -220,9 +233,9 @@ export function TagSelector({
           </CommandEmpty>
 
           {/* Tags existentes */}
-          {unselectedTags.length > 0 && (
+          {filteredTags.length > 0 && (
             <CommandGroup heading="Tags existentes">
-              {unselectedTags.map((tag) => (
+              {filteredTags.map((tag) => (
                 <CommandItem
                   key={tag.id}
                   value={tag.name}
@@ -241,7 +254,7 @@ export function TagSelector({
           {isNewTag && (
             <CommandGroup heading="Criar nova">
               <CommandItem
-                value="create-new"
+                value={`create-new:${inputValue}`}
                 onSelect={handleSelect}
                 className="flex items-center gap-2"
               >
