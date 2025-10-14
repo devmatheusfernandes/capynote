@@ -45,10 +45,10 @@ export function CreateButton({
               isFloating && [
                 "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg",
                 "md:hidden", // Só aparece no mobile
-                "bg-indigo-600 text-white hover:bg-indigo-500",
+                "bg-primary text-white hover:bg-primary",
               ],
               !isFloating &&
-                "flex bg-indigo-600 hover:bg-indigo-500 text-white items-center gap-2",
+                "flex bg-primary hover:bg-primary text-white items-center gap-2",
               className
             )}
           >

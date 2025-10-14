@@ -75,7 +75,7 @@ export function FolderCard({
             >
               <div className="flex-shrink-0">
                 <Folder
-                  className="h-8 w-8 text-indigo-600"
+                  className="h-8 w-8 text-primary"
                   style={{ color: folder.color || "#3b82f6" }}
                 />
               </div>
