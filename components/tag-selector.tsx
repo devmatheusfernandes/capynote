@@ -206,7 +206,6 @@ export function TagSelector({
         onOpenChange={setOpen}
         title="Selecionar Tags"
         description="Busque por tags existentes ou crie novas"
-        shouldFilter={false}
       >
         <CommandInput
           placeholder={placeholder}

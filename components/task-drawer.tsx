@@ -39,7 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TagSelector } from "@/components/tag-selector";
 import { DateSuggestion } from "@/components/highlighted-text";
 import { cn } from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
@@ -48,7 +47,11 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import { useDateDetection } from "@/hooks/use-date-detection";
 import { Calendar as DatePickerCalendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TaskDrawerProps {
   open: boolean;
@@ -339,11 +342,6 @@ export function TaskDrawer({
     []
   );
 
-  const handleTagsChange = useCallback((newTags: string[]) => {
-    setTags(newTags);
-    setHasChanges(true);
-  }, []);
-
   const handlePriorityChange = useCallback(
     (newPriority: "baixa" | "media" | "alta") => {
       setPriority(newPriority);
@@ -360,21 +358,21 @@ export function TaskDrawer({
     []
   );
 
-  const handleDueDateChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setDueDate(e.target.value);
-      setHasChanges(true);
-    },
-    []
-  );
+  // const handleDueDateChange = useCallback(
+  //   (e: React.ChangeEvent<HTMLInputElement>) => {
+  //     setDueDate(e.target.value);
+  //     setHasChanges(true);
+  //   },
+  //   []
+  // );
 
-  const handleDueTimeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setDueTime(e.target.value);
-      setHasChanges(true);
-    },
-    []
-  );
+  // const handleDueTimeChange = useCallback(
+  //   (e: React.ChangeEvent<HTMLInputElement>) => {
+  //     setDueTime(e.target.value);
+  //     setHasChanges(true);
+  //   },
+  //   []
+  // );
 
   // Handlers para repetição
   const handleRecurringToggle = useCallback((checked: boolean) => {
@@ -451,20 +449,20 @@ export function TaskDrawer({
     setHasChanges(true);
   }, []);
 
-  const toggleSubtask = useCallback((id: string, checked: boolean) => {
-    setSubtasks((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status: checked ? "concluida" : "pendente",
-              updatedAt: new Date().toISOString(),
-            }
-          : s
-      )
-    );
-    setHasChanges(true);
-  }, []);
+  // const toggleSubtask = useCallback((id: string, checked: boolean) => {
+  //   setSubtasks((prev) =>
+  //     prev.map((s) =>
+  //       s.id === id
+  //         ? {
+  //             ...s,
+  //             status: checked ? "concluida" : "pendente",
+  //             updatedAt: new Date().toISOString(),
+  //           }
+  //         : s
+  //     )
+  //   );
+  //   setHasChanges(true);
+  // }, []);
 
   const removeSubtask = useCallback((id: string) => {
     setSubtasks((prev) => prev.filter((s) => s.id !== id));
@@ -749,7 +747,9 @@ export function TaskDrawer({
                 <PopoverContent className="w-auto p-0" align="start">
                   <DatePickerCalendar
                     mode="single"
-                    selected={dueDate ? new Date(`${dueDate}T00:00:00`) : undefined}
+                    selected={
+                      dueDate ? new Date(`${dueDate}T00:00:00`) : undefined
+                    }
                     onSelect={(date) => {
                       if (date) {
                         const iso = date.toISOString();
@@ -773,7 +773,9 @@ export function TaskDrawer({
                 </PopoverTrigger>
                 <PopoverContent className="w-[260px] p-3" align="start">
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-muted-foreground">Selecionar horário</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Selecionar horário
+                    </div>
                     <div className="flex items-center gap-2">
                       <Select
                         value={timeHour}
@@ -791,7 +793,9 @@ export function TaskDrawer({
                           {Array.from({ length: 24 }, (_, i) => i)
                             .map((h) => h.toString().padStart(2, "0"))
                             .map((h) => (
-                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                              <SelectItem key={h} value={h}>
+                                {h}
+                              </SelectItem>
                             ))}
                         </SelectContent>
                       </Select>
@@ -809,8 +813,23 @@ export function TaskDrawer({
                           <SelectValue placeholder="Minuto" />
                         </SelectTrigger>
                         <SelectContent side="bottom">
-                          {["00","05","10","15","20","25","30","35","40","45","50","55"].map((m) => (
-                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          {[
+                            "00",
+                            "05",
+                            "10",
+                            "15",
+                            "20",
+                            "25",
+                            "30",
+                            "35",
+                            "40",
+                            "45",
+                            "50",
+                            "55",
+                          ].map((m) => (
+                            <SelectItem key={m} value={m}>
+                              {m}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -829,7 +848,9 @@ export function TaskDrawer({
                       <Button
                         size="sm"
                         onClick={() => {
-                          const finalTime = `${timeHour || "09"}:${timeMinute || "00"}`;
+                          const finalTime = `${timeHour || "09"}:${
+                            timeMinute || "00"
+                          }`;
                           setDueTime(finalTime);
                           setHasChanges(true);
                         }}
