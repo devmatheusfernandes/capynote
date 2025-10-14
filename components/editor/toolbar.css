@@ -1,0 +1,244 @@
+/* Toolbar Container - Fixed bottom, full width */
+.toolbar-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background-color: #edeef0;
+  border-top: 1px solid #e5e7eb;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+}
+
+/* Dark mode support */
+.dark .toolbar-container {
+  background-color: oklch(0.256 0.006 56.043);
+  border-top-color: oklch(1 0 0 / 10%);
+}
+
+/* Toolbar Content - Responsive container */
+.toolbar-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.toolbar-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Toolbar Groups */
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+/* Toolbar Separator */
+.toolbar-separator {
+  width: 1px;
+  height: 1.25rem;
+  background-color: #d1d5db;
+  flex-shrink: 0;
+  margin: 0 0.375rem;
+}
+
+.dark .toolbar-separator {
+  background-color: #4b5563;
+}
+
+/* Toolbar Buttons - Following design rules */
+.toolbar-button {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0.375rem;
+  border: none;
+  background-color: transparent;
+  color: #6b7280;
+  transition: all 0.15s ease-in-out;
+  flex-shrink: 0;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.toolbar-button:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.toolbar-button:focus {
+  outline: none;
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+/* Active state for formatting buttons */
+.toolbar-button[data-state="on"],
+.toolbar-button.active {
+  background-color: #111827;
+  color: white;
+}
+
+.toolbar-button[data-state="on"]:hover,
+.toolbar-button.active:hover {
+  background-color: #1f2937;
+}
+
+/* Secondary buttons (Obsidian features) */
+.toolbar-button-secondary {
+  color: #059669;
+}
+
+.toolbar-button-secondary:hover {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.toolbar-button-secondary:focus {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+/* Dark mode button styles */
+.dark .toolbar-button {
+  background-color: transparent;
+  color: #9ca3af;
+}
+
+.dark .toolbar-button:hover {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.dark .toolbar-button[data-state="on"],
+.dark .toolbar-button.active {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.dark .toolbar-button[data-state="on"]:hover,
+.dark .toolbar-button.active:hover {
+  background-color: #e5e7eb;
+}
+
+.dark .toolbar-button-secondary {
+  color: #10b981;
+}
+
+.dark .toolbar-button-secondary:hover {
+  background-color: #064e3b;
+  color: #34d399;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .toolbar-container {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .toolbar-content {
+    gap: 0.125rem;
+  }
+  
+  .toolbar-group {
+    gap: 0.0625rem;
+  }
+  
+  .toolbar-button {
+    min-width: 1.875rem;
+    height: 1.875rem;
+    padding: 0.3125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-container {
+    padding: 0.5rem;
+  }
+  
+  .toolbar-button {
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0.25rem;
+  }
+  
+  .toolbar-separator {
+    height: 1rem;
+    margin: 0 0.25rem;
+  }
+}
+
+/* Extra small screens - hide some less essential buttons */
+@media (max-width: 360px) {
+  .toolbar-group:nth-child(3) {
+    display: none; /* Hide heading buttons on very small screens */
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .toolbar-container {
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .toolbar-button {
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.25rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .toolbar-button {
+    border: 1px solid currentColor;
+  }
+  
+  .toolbar-separator {
+    background-color: #000;
+  }
+  
+  .dark .toolbar-separator {
+    background-color: #fff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-button {
+    transition: none;
+  }
+}
+
+/* Focus visible for accessibility */
+.toolbar-button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Ensure toolbar doesn't interfere with content */
+.toolbar-spacer {
+  height: 3rem;
+}
+
+@media (max-width: 640px) {
+  .toolbar-spacer {
+    height: 2.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-spacer {
+    height: 2.5rem;
+  }
+}
