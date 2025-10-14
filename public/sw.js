@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 const CACHE_VERSION = "v1";
-const CACHE_NAME = `notasker-${CACHE_VERSION}`;
+const CACHE_NAME = `capynotes-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {
