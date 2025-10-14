@@ -230,7 +230,7 @@ export default function ConfiguracoesPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 sm:max-w-[80vw] max-w-[100vw]">
       <PageHeader
         title="Configurações"
         description="Gerencie suas preferências e configurações da aplicação."
@@ -238,7 +238,7 @@ export default function ConfiguracoesPage() {
 
       <Separator />
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Gerenciar Tags</CardTitle>
@@ -249,7 +249,7 @@ export default function ConfiguracoesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {availableTags.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-6 sm:py-8">
                 <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">Nenhuma tag encontrada</p>
                 <p className="text-sm text-muted-foreground">
@@ -267,7 +267,7 @@ export default function ConfiguracoesPage() {
                 <div className="flex flex-wrap gap-2">
                   {availableTags.map((tag) => (
                     <div key={tag.id} className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-sm">
+                      <Badge variant="secondary" className="px-2 py-1 text-xs sm:text-sm">
                         {tag.name}
                       </Badge>
                       <AlertDialog>
@@ -316,7 +316,7 @@ export default function ConfiguracoesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-3 sm:items-center">
               <div className="space-y-0.5">
                 <label className="text-sm font-medium">Tema</label>
                 <p className="text-sm text-muted-foreground">
@@ -358,17 +358,18 @@ export default function ConfiguracoesPage() {
               <p className="text-sm text-muted-foreground">
                 Ative para receber lembretes das tarefas na data e horário.
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Button
+                  className="w-full sm:w-auto"
                   variant={notificationsEnabled ? "default" : "outline"}
                   onClick={toggleNotifications}
                 >
                   {notificationsEnabled ? "Desativar" : "Ativar"} notificações
                 </Button>
-                <Button variant="secondary" onClick={testNotification}>
+                <Button className="w-full sm:w-auto" variant="secondary" onClick={testNotification}>
                   Testar notificação
                 </Button>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground sm:ml-2 mt-1 sm:mt-0">
                   Permissão: {permission}
                 </span>
               </div>
@@ -383,12 +384,12 @@ export default function ConfiguracoesPage() {
               <p className="text-sm text-muted-foreground">
                 Usado quando você define apenas a data da tarefa.
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 <Input
                   type="time"
                   value={defaultTaskTime}
                   onChange={(e) => saveDefaultTaskTime(e.target.value)}
-                  className="max-w-[160px]"
+                  className="w-full sm:max-w-[160px]"
                 />
               </div>
             </div>

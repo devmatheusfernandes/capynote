@@ -230,7 +230,7 @@ export default function DashboardPage() {
   }, [tasks]);
 
   return (
-    <div className="container mx-auto p-6 max-w-[80vw]">
+    <div className="container mx-auto p-6 sm:max-w-[80vw] max-w-[100vw]">
       {/* Header */}
       <PageHeader
         title="Dashboard"
