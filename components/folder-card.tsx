@@ -74,10 +74,7 @@ export function FolderCard({
               onClick={() => !isRenaming && onOpen(folder.id)}
             >
               <div className="flex-shrink-0">
-                <Folder
-                  className="h-8 w-8 text-primary"
-                  style={{ color: folder.color || "#3b82f6" }}
-                />
+                <Folder className="h-8 w-8 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 {isRenaming ? (

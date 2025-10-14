@@ -401,13 +401,13 @@ export default function NotasPage() {
         title="Notas"
         otherButton={
           <div className="flex flex-row items-center gap-2">
-            <Button variant="outline" onClick={() => setNoteDrawerOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Nova Nota
-            </Button>
             <Button variant="outline" onClick={() => setCreateFolderOpen(true)}>
               <FolderPlus className="h-4 w-4" />
               Nova Pasta
+            </Button>
+            <Button variant="default" onClick={() => setNoteDrawerOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nova Nota
             </Button>
           </div>
         }

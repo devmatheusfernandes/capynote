@@ -55,7 +55,7 @@ export function HighlightedText({
                 variant="outline"
                 className={cn(
                   "cursor-pointer transition-all duration-200",
-                  "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+                  "bg-blue-50 text-primary border-blue-200 hover:bg-blue-100",
                   "font-medium",
                   isHovered && "ring-2 ring-blue-300"
                 )}
@@ -161,10 +161,10 @@ export function DateSuggestion({
       )}
     >
       <div className="flex items-center gap-2 flex-1">
-        <Calendar className="h-4 w-4 text-blue-600" />
+        <Calendar className="h-4 w-4 text-primary" />
         <div className="text-sm">
           <span className="text-gray-700">Data detectada: </span>
-          <span className="font-medium text-blue-700">{suggestion.text}</span>
+          <span className="font-medium text-primary">{suggestion.text}</span>
           <span className="text-gray-700"> → </span>
           <span className="font-medium text-gray-900">{formattedDate}</span>
           <span className="text-gray-500 ml-1">({numericDate})</span>
@@ -185,7 +185,7 @@ export function DateSuggestion({
           size="sm"
           variant="outline"
           onClick={handleApply}
-          className="h-8 text-blue-600 border-blue-300 hover:bg-blue-100"
+          className="h-8 text-primary border-blue-300 hover:bg-blue-100"
         >
           <Check className="h-3 w-3 mr-1" />
           Aplicar

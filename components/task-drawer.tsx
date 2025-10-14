@@ -7,7 +7,7 @@ import {
   X,
   Maximize2,
   Trash2,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   Flag,
   Save,
@@ -41,12 +41,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { TagSelector } from "@/components/tag-selector";
 import { DateSuggestion } from "@/components/highlighted-text";
-import { useDateDetection } from "@/hooks/use-date-detection";
 import { cn } from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+import { useDateDetection } from "@/hooks/use-date-detection";
+import { Calendar as DatePickerCalendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface TaskDrawerProps {
   open: boolean;
@@ -94,7 +96,7 @@ export function TaskDrawer({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [priority, setPriority] = useState<"baixa" | "media" | "alta">("media");
+  const [priority, setPriority] = useState<"baixa" | "media" | "alta">("baixa");
   const [status, setStatus] = useState<
     "pendente" | "em-progresso" | "concluida"
   >("pendente");
@@ -121,6 +123,16 @@ export function TaskDrawer({
 
   // Subtarefas
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+
+  // Estado do timepicker
+  const [timeHour, setTimeHour] = useState<string>("");
+  const [timeMinute, setTimeMinute] = useState<string>("");
+  useEffect(() => {
+    const base = dueTime || defaultTaskTime || "09:00";
+    const [h, m] = base.split(":");
+    setTimeHour(h?.padStart(2, "0") || "09");
+    setTimeMinute(m?.padStart(2, "0") || "00");
+  }, [dueTime, defaultTaskTime]);
 
   // Ler horário padrão do usuário nas configurações
   useEffect(() => {
@@ -538,7 +550,7 @@ export function TaskDrawer({
       case "media":
         return "text-yellow-600";
       case "baixa":
-        return "text-green-600";
+        return "text-teal-600";
       default:
         return "text-gray-600";
     }
@@ -547,9 +559,9 @@ export function TaskDrawer({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "concluida":
-        return "text-green-600";
+        return "text-teal-600";
       case "em-progresso":
-        return "text-blue-600";
+        return "text-primary";
       case "pendente":
         return "text-gray-600";
       default:
@@ -629,7 +641,7 @@ export function TaskDrawer({
                 variant="ghost"
                 size="sm"
                 onClick={handleManualSave}
-                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                className="h-8 w-8 p-0 text-teal-600 hover:text-teal-700"
                 disabled={!hasChanges}
               >
                 <Save className="h-4 w-4" />
@@ -657,12 +669,12 @@ export function TaskDrawer({
         <div className="flex-1 flex flex-col p-4 overflow-auto">
           {/* Title Input */}
           <div className="flex-shrink-0 mb-4">
-            <div className="relative">
+            <div className="relative flex flex-row gap-2">
               <Input
-                placeholder="Título da tarefa..."
+                placeholder="Eu preciso..."
                 value={title}
                 onChange={handleTitleChange}
-                className="text-lg font-medium border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="text-md font-regular border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {titleDateDetection.hasSuggestion &&
                 titleDateDetection.suggestion &&
@@ -682,175 +694,167 @@ export function TaskDrawer({
                     />
                   </div>
                 )}
-            </div>
-          </div>
-
-          {/* Priority and Status */}
-          <div className="flex-shrink-0 mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Prioridade
-              </label>
-              <Select value={priority} onValueChange={handlePriorityChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    <div className="flex items-center gap-2">
-                      <Flag
-                        className={cn("h-4 w-4", getPriorityColor(priority))}
-                      />
-                      <span className="capitalize">{priority}</span>
-                    </div>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-4 w-4 text-green-600" />
-                      <span>Baixa</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="media">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-4 w-4 text-yellow-600" />
-                      <span>Média</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="alta">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-4 w-4 text-red-600" />
-                      <span>Alta</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Status
-              </label>
-              <Select value={status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    <span className={cn("capitalize", getStatusColor(status))}>
-                      {status.replace("_", " ")}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pendente">
-                    <span className="text-gray-600">Pendente</span>
-                  </SelectItem>
-                  <SelectItem value="em-progresso">
-                    <span className="text-blue-600">Em Progresso</span>
-                  </SelectItem>
-                  <SelectItem value="concluida">
-                    <span className="text-green-600">Concluída</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Due Date - Only show if not recurring */}
-          {!isRecurring && (
-            <div className="flex-shrink-0 mb-4">
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Data de Vencimento
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={handleDueDateChange}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Time - Only show if not recurring */}
-          {!isRecurring && (
-            <div className="flex-shrink-0 mb-4">
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                Horário
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="time"
-                  value={dueTime}
-                  onChange={handleDueTimeChange}
-                  className="pl-10"
-                  placeholder="HH:MM"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          <div className="flex-shrink-0 mb-4">
-            <TagSelector
-              selectedTags={tags}
-              onTagsChange={handleTagsChange}
-              placeholder="Adicionar tags..."
-            />
-          </div>
-
-          {/* Subtarefas */}
-          <div className="flex-shrink-0 mb-4">
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Subtarefas
-            </label>
-            <div className="space-y-2">
-              {subtasks.map((st) => (
-                <div key={st.id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={st.status === "concluida"}
-                    onCheckedChange={(checked) =>
-                      toggleSubtask(st.id, Boolean(checked))
-                    }
-                  />
-                  <Input
-                    value={st.title}
-                    onChange={(e) => updateSubtaskTitle(st.id, e.target.value)}
-                    placeholder="Título da subtarefa"
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeSubtask(st.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addSubtask}>
+              <Button variant="outline" onClick={addSubtask}>
                 Adicionar subtarefa
               </Button>
             </div>
+            {/* Subtarefas */}
+            <div className="flex-shrink-0 mb-2">
+              <div className="space-y-2">
+                {subtasks.map((st) => (
+                  <div
+                    key={st.id}
+                    className="flex flex-col items-start gap-2 mt-2"
+                  >
+                    <label className="text-sm font-medium text-muted-foreground block">
+                      Subtarefas
+                    </label>
+                    <div className="flex flex-row gap-2 w-full">
+                      <Input
+                        value={st.title}
+                        onChange={(e) =>
+                          updateSubtaskTitle(st.id, e.target.value)
+                        }
+                        placeholder="Subtarefa aqui..."
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSubtask(st.id)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Controles rápidos (como botões) — exibidos quando não é recorrente */}
+          {!isRecurring && (
+            <div className="flex flex-row flex-wrap gap-2 mb-4">
+              {/* DatePicker (shadcn) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-start gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    {dueDate
+                      ? new Date(dueDate).toLocaleDateString("pt-BR")
+                      : "Adicionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <DatePickerCalendar
+                    mode="single"
+                    selected={dueDate ? new Date(`${dueDate}T00:00:00`) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const iso = date.toISOString();
+                        const dateStr = iso.split("T")[0];
+                        setDueDate(dateStr);
+                        setHasChanges(true);
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* TimePicker (Popover + Select) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-start gap-2">
+                    <Clock className="h-4 w-4" />
+                    {dueTime ? dueTime : "Horário"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[260px] p-3" align="start">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Selecionar horário</div>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={timeHour}
+                        onValueChange={(v) => {
+                          setTimeHour(v);
+                          const newTime = `${v}:${timeMinute || "00"}`;
+                          setDueTime(newTime);
+                          setHasChanges(true);
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="Hora" />
+                        </SelectTrigger>
+                        <SelectContent side="bottom">
+                          {Array.from({ length: 24 }, (_, i) => i)
+                            .map((h) => h.toString().padStart(2, "0"))
+                            .map((h) => (
+                              <SelectItem key={h} value={h}>{h}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">:</span>
+                      <Select
+                        value={timeMinute}
+                        onValueChange={(v) => {
+                          setTimeMinute(v);
+                          const newTime = `${timeHour || "09"}:${v}`;
+                          setDueTime(newTime);
+                          setHasChanges(true);
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="Minuto" />
+                        </SelectTrigger>
+                        <SelectContent side="bottom">
+                          {["00","05","10","15","20","25","30","35","40","45","50","55"].map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDueTime("");
+                          setHasChanges(true);
+                        }}
+                      >
+                        Limpar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const finalTime = `${timeHour || "09"}:${timeMinute || "00"}`;
+                          setDueTime(finalTime);
+                          setHasChanges(true);
+                        }}
+                      >
+                        Definir
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Botão Repetitiva */}
+              <Button
+                variant="outline"
+                className="justify-start gap-2"
+                onClick={() => handleRecurringToggle(true)}
+              >
+                <Repeat className="h-4 w-4" />
+                Repetitiva
+              </Button>
+            </div>
+          )}
 
           {/* Repetição */}
           <div className="flex-shrink-0 mb-4">
-            <div className="flex items-center space-x-2 mb-3">
-              <Checkbox
-                id="recurring"
-                checked={isRecurring}
-                onCheckedChange={handleRecurringToggle}
-              />
-              <label
-                htmlFor="recurring"
-                className="text-sm font-medium text-muted-foreground flex items-center gap-2"
-              >
-                <Repeat className="h-4 w-4" />
-                Tarefa repetitiva
-              </label>
-            </div>
-
             {/* Resumo da repetição */}
             {isRecurring && getRecurringSummary() && (
               <div className="mb-3 p-2 bg-muted/50 rounded-md">
@@ -862,6 +866,20 @@ export function TaskDrawer({
 
             {isRecurring && (
               <div className="space-y-4 pl-6 border-l-2 border-muted">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Checkbox
+                    id="recurring"
+                    checked={isRecurring}
+                    onCheckedChange={handleRecurringToggle}
+                  />
+                  <label
+                    htmlFor="recurring"
+                    className="text-sm font-medium text-muted-foreground flex items-center gap-2"
+                  >
+                    <Repeat className="h-4 w-4" />
+                    Tarefa repetitiva
+                  </label>
+                </div>
                 {/* Tipo de repetição */}
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -976,6 +994,73 @@ export function TaskDrawer({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Priority and Status */}
+          <div className="flex-shrink-0 mb-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Prioridade
+              </label>
+              <Select value={priority} onValueChange={handlePriorityChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <Flag
+                        className={cn("h-4 w-4", getPriorityColor(priority))}
+                      />
+                      <span className="capitalize">{priority}</span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-teal-600" />
+                      <span>Baixa</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="media">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-yellow-600" />
+                      <span>Média</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="alta">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-red-600" />
+                      <span>Alta</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Status
+              </label>
+              <Select value={status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <span className={cn("capitalize", getStatusColor(status))}>
+                      {status.replace("_", " ")}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pendente">
+                    <span className="text-gray-600">Pendente</span>
+                  </SelectItem>
+                  <SelectItem value="em-progresso">
+                    <span className="text-primary">Em Progresso</span>
+                  </SelectItem>
+                  <SelectItem value="concluida">
+                    <span className="text-teal-600">Concluída</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Description */}

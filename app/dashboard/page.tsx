@@ -248,7 +248,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Total de Notas
             </CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalNotes}</div>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
         <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
+              <FileText className="h-5 w-5 text-primary" />
               Notas Recentes
             </CardTitle>
             <CardDescription>Suas últimas anotações</CardDescription>

@@ -549,7 +549,7 @@ export default function TarefasPage() {
       case "concluida":
         return "bg-green-100 text-green-800 border-green-200";
       case "em-progresso":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-primary border-blue-200";
       case "pendente":
         return "bg-gray-100 text-gray-800 border-gray-200";
       default:
@@ -887,7 +887,7 @@ export default function TarefasPage() {
       : task.id;
 
     return (
-      <div className="flex flex-row items-center gap-2 px-2 py-1 border rounded-md hover:bg-primary transition-colors">
+      <div className="flex flex-row items-center gap-2 px-2 py-1 border rounded-md hover:border-primary hover:border-1 duration-300 ease-in-out transition-all">
         {/* Checkbox */}
         <Checkbox
           checked={task.status === "concluida"}
@@ -974,7 +974,7 @@ export default function TarefasPage() {
               {!isRecurringOccurrence &&
                 task.subtasks &&
                 task.subtasks.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="hidden mt-2 space-y-1">
                     {task.subtasks.map((st) => (
                       <div key={st.id} className="flex items-center gap-2">
                         <Checkbox
