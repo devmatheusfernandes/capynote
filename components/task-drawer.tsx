@@ -693,7 +693,7 @@ export function TaskDrawer({
                   </div>
                 )}
               <Button variant="outline" onClick={addSubtask}>
-                Adicionar subtarefa
+                + Subtarefa
               </Button>
             </div>
             {/* Subtarefas */}
@@ -741,7 +741,7 @@ export function TaskDrawer({
                     <CalendarIcon className="h-4 w-4" />
                     {dueDate
                       ? new Date(dueDate).toLocaleDateString("pt-BR")
-                      : "Adicionar data"}
+                      : "Data"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

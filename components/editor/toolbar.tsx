@@ -18,7 +18,8 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
 } from "@lexical/list";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Bold,
@@ -41,8 +42,9 @@ function useKeyboardOffset() {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    const vv = (typeof window !== "undefined" &&
-      (window as any).visualViewport) as VisualViewport | undefined;
+    if (typeof window === "undefined") return;
+    const vv =
+      (window as Window & { visualViewport?: VisualViewport }).visualViewport;
     if (!vv) return;
 
     const update = () => {
@@ -167,7 +169,7 @@ export default function Toolbar({
   return (
     <div
       className="toolbar-container"
-      style={{ ["--kb-offset" as any]: `${keyboardOffset}px` }}
+      style={{ "--kb-offset": `${keyboardOffset}px` } as CSSProperties}
     >
       <div className="toolbar-content">
         {/* Grupo de formatação de texto */}

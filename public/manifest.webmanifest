@@ -1,6 +1,6 @@
 {
-  "name": "Note-taking",
-  "short_name": "Notes",
+  "name": "CapyNotes",
+  "short_name": "CapyNotes",
   "description": "Aplicativo de notas com tarefas e editor",
   "start_url": "/",
   "scope": "/",

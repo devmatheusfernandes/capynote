@@ -25,7 +25,6 @@ import {
 import Toolbar from "./toolbar";
 import "./note-editor.css";
 import React from "react";
-import { Button } from "@/components/ui/button";
 
 const theme = {
   // Theme stylingf
@@ -189,7 +188,6 @@ export default function NoteEditorWithToolbar({
   showToolbar = true,
   openReadMode,
   onOpenReadMode,
-  onCloseReadMode,
 }: NoteEditorWithToolbarProps) {
   // Modo leitura: controlado externamente por openReadMode
 
@@ -240,9 +238,7 @@ export default function NoteEditorWithToolbar({
       </LexicalComposer>
 
       {/* Adiciona padding bottom para compensar a toolbar fixa */}
-      {showToolbar && !openReadMode && (
-        <div className="toolbar-spacer" />
-      )}
+      {showToolbar && !openReadMode && <div className="toolbar-spacer" />}
     </div>
   );
 }
