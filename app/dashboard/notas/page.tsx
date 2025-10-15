@@ -500,7 +500,7 @@ export default function NotasPage() {
                   <CardTitle className="text-md line-clamp-2 transition-colors">
                     {note.title || "Nota sem título"}
                   </CardTitle>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"

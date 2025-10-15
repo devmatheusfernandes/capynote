@@ -230,7 +230,7 @@ export default function ConfiguracoesPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 sm:max-w-[80vw] max-w-[100vw]">
+    <div className="space-y-4 sm:space-y-6 container sm:p-6 p-4 sm:max-w-[80vw] max-w-[100vw]">
       <PageHeader
         title="Configurações"
         description="Gerencie suas preferências e configurações da aplicação."
