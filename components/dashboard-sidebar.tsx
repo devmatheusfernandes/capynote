@@ -262,12 +262,14 @@ function MobileHeader() {
 }
 
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const hideMobileHeader = pathname?.startsWith("/dashboard/notas/editar/") ?? false;
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex flex-1 flex-col">
-          <MobileHeader />
+          {!hideMobileHeader && <MobileHeader />}
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
       </div>

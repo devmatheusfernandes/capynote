@@ -25,6 +25,7 @@ import {
 import Toolbar from "./toolbar";
 import "./note-editor.css";
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 const theme = {
   // Theme stylingf
@@ -109,6 +110,9 @@ export interface NoteEditorWithToolbarProps {
   initialValue?: string;
   className?: string;
   showToolbar?: boolean;
+  openReadMode?: boolean;
+  onOpenReadMode?: () => void;
+  onCloseReadMode?: () => void;
 }
 
 function MyOnChangePlugin({
@@ -124,6 +128,14 @@ function MyOnChangePlugin({
       }}
     />
   );
+}
+
+function EditableTogglePlugin({ editable }: { editable: boolean }) {
+  const [editor] = useLexicalComposerContext();
+  React.useEffect(() => {
+    editor.setEditable(editable);
+  }, [editor, editable]);
+  return null;
 }
 
 function InitialValuePlugin({ initialValue }: { initialValue?: string }) {
@@ -175,7 +187,12 @@ export default function NoteEditorWithToolbar({
   initialValue,
   className = "",
   showToolbar = true,
+  openReadMode,
+  onOpenReadMode,
+  onCloseReadMode,
 }: NoteEditorWithToolbarProps) {
+  // Modo leitura: controlado externamente por openReadMode
+
   const initialConfig = {
     namespace: "NoteEditorWithToolbar",
     theme,
@@ -212,15 +229,20 @@ export default function NoteEditorWithToolbar({
             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
             <TabIndentationPlugin />
             <ObsidianPlugin />
-            <MyOnChangePlugin onChange={onChange} />
+            <MyOnChangePlugin onChange={(s) => onChange?.(s)} />
             <InitialValuePlugin initialValue={initialValue} />
+            <EditableTogglePlugin editable={!openReadMode} />
           </div>
         </div>
-        {showToolbar && <Toolbar />}
+        {showToolbar && !openReadMode && (
+          <Toolbar onToggleReadMode={onOpenReadMode} />
+        )}
       </LexicalComposer>
 
       {/* Adiciona padding bottom para compensar a toolbar fixa */}
-      {showToolbar && <div className="toolbar-spacer" />}
+      {showToolbar && !openReadMode && (
+        <div className="toolbar-spacer" />
+      )}
     </div>
   );
 }

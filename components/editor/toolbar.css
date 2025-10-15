@@ -1,7 +1,8 @@
 /* Toolbar Container - Fixed bottom, full width */
 .toolbar-container {
   position: fixed;
-  bottom: 0;
+  /* Afasta a toolbar do teclado virtual no mobile e respeita o safe-area */
+  bottom: calc(var(--kb-offset, 0px) + env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   width: 100%;

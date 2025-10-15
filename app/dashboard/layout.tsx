@@ -1,4 +1,4 @@
-import { FloatingCreateButton } from "@/components/create-button";
+import RouteAwareFloatingCreateButton from "@/components/route-aware-floating-create-button";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import MountNotifications from "@/components/mount-notifications";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -13,7 +13,7 @@ export default function DashboardLayout({
       <DashboardSidebar>
         <div className="bg-background h-full">{children}</div>
         <MountNotifications />
-        <FloatingCreateButton />
+        <RouteAwareFloatingCreateButton />
       </DashboardSidebar>
     </ProtectedRoute>
   );

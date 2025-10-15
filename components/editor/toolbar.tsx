@@ -18,7 +18,7 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
 } from "@lexical/list";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Bold,
@@ -34,15 +34,59 @@ import {
   Quote,
   Link,
   Hash,
+  Eye,
 } from "lucide-react";
 
-export default function Toolbar() {
+function useKeyboardOffset() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const vv = (typeof window !== "undefined" &&
+      (window as any).visualViewport) as VisualViewport | undefined;
+    if (!vv) return;
+
+    const update = () => {
+      // Considera apenas mobile para evitar deslocamento em telas grandes
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      if (!isMobile) {
+        setOffset(0);
+        return;
+      }
+      // Área oculta pelo teclado = diferença entre layout viewport e visual viewport
+      const layoutH = window.innerHeight;
+      const visualBottom = vv.height + vv.offsetTop;
+      const hidden = Math.max(0, Math.round(layoutH - visualBottom));
+      setOffset(hidden);
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("orientationchange", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return offset;
+}
+
+export default function Toolbar({
+  onToggleReadMode,
+}: {
+  onToggleReadMode?: () => void;
+}) {
   const [editor] = useLexicalComposerContext();
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [isCode, setIsCode] = useState(false);
+  const keyboardOffset = useKeyboardOffset();
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -121,7 +165,10 @@ export default function Toolbar() {
   };
 
   return (
-    <div className="toolbar-container">
+    <div
+      className="toolbar-container"
+      style={{ ["--kb-offset" as any]: `${keyboardOffset}px` }}
+    >
       <div className="toolbar-content">
         {/* Grupo de formatação de texto */}
         <div className="toolbar-group">
@@ -268,6 +315,21 @@ export default function Toolbar() {
             title="Tag #"
           >
             <Hash className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="toolbar-separator" />
+
+        {/* Modo leitura */}
+        <div className="toolbar-group">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleReadMode}
+            className="toolbar-button"
+            title="Modo leitura"
+          >
+            <Eye className="h-4 w-4" />
           </Button>
         </div>
       </div>

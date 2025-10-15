@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { Save, Trash2, MoreVertical, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet";
 import NoteEditorWithToolbar from "@/components/editor/note-editor-with-toolbar";
 import { TagSelector } from "@/components/tag-selector";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,6 +26,71 @@ import {
   onSnapshot as onTagsSnapshot,
 } from "firebase/firestore";
 import { NoteData, TagData } from "@/types";
+import CapybaraLoader from "@/components/capybaraLoader";
+
+type EditorOptionsSheetProps = {
+  onSave: () => void;
+  onDelete: () => void;
+  onReadMode: () => void;
+};
+
+function EditorOptionsSheet({
+  onSave,
+  onDelete,
+  onReadMode,
+}: EditorOptionsSheetProps) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto"
+          aria-label="Abrir opções"
+        >
+          <MoreVertical className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="p-0">
+        <SheetHeader className="p-4 border-b">
+          <SheetTitle>Opções da nota</SheetTitle>
+        </SheetHeader>
+        <div className="p-4 space-y-2">
+          <SheetClose asChild>
+            <Button
+              variant="secondary"
+              className="w-full justify-start gap-2"
+              onClick={onReadMode}
+            >
+              <BookOpen className="h-4 w-4" />
+              Modo leitura
+            </Button>
+          </SheetClose>
+          <SheetClose asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={onSave}
+            >
+              <Save className="h-4 w-4" />
+              Salvar arquivo
+            </Button>
+          </SheetClose>
+          <SheetClose asChild>
+            <Button
+              variant="destructive"
+              className="w-full justify-start gap-2"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Apagar arquivo
+            </Button>
+          </SheetClose>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 export default function EditNotePage() {
   const router = useRouter();
@@ -30,9 +103,9 @@ export default function EditNotePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
   const [availableTags, setAvailableTags] = useState<TagData[]>([]);
+  const [openReadMode, setOpenReadMode] = useState(false);
 
   // Load note from Firestore (real-time)
   useEffect(() => {
@@ -75,37 +148,7 @@ export default function EditNotePage() {
     return () => unsub();
   }, [user?.id]);
 
-  // Handle scroll for sticky header on mobile
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const isMobile = window.innerWidth < 768; // md breakpoint
-
-      if (isMobile) {
-        setShowStickyHeader(scrollY > 100); // Show after scrolling 100px
-      } else {
-        setShowStickyHeader(false);
-      }
-    };
-
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 768;
-      if (!isMobile) {
-        setShowStickyHeader(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleResize);
-
-    // Initial check
-    handleScroll();
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  // Removido: sticky header de mobile para maximizar espaço da tela do editor
 
   // Auto-save functionality
   const saveNote = useCallback(async () => {
@@ -198,18 +241,12 @@ export default function EditNotePage() {
     }
   }, [noteId, router, user?.id]);
 
-  // Handle back navigation
-  const handleBack = useCallback(() => {
-    if (hasChanges) {
-      saveNote();
-    }
-    router.back();
-  }, [hasChanges, saveNote, router]);
+  // Sem botão de voltar nesta tela para otimizar espaço
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Carregando...</div>
+        <CapybaraLoader />
       </div>
     );
   }
@@ -217,60 +254,36 @@ export default function EditNotePage() {
   return (
     <>
       <div className="min-h-screen md:h-screen md:flex md:flex-col">
-        {/* Header Principal */}
-        <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
-              </Button>
-
-              {/* Título editável centralizado */}
-              <div className="flex-1 mx-8 hidden md:block">
-                <Input
-                  placeholder="Título da nota..."
-                  value={title}
-                  onChange={handleTitleChange}
-                  className="text-lg font-medium text-center border-0 px-4 py-2 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
-                />
-              </div>
-
-              {/* Título mobile - visível apenas no mobile */}
-              <div className="flex-1 mx-4 md:hidden">
-                <Input
-                  placeholder="Título da nota..."
-                  value={title}
-                  onChange={handleTitleChange}
-                  className="text-base font-medium text-center border-0 px-2 py-1 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
+        {/* Header próprio do editor: título + botão para abrir sheet */}
+        <div
+          className={`flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
+            !openReadMode ? "sticky top-0 z-10" : ""
+          }`}
+        >
+          <div className="px-4 md:px-6 py-2">
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Título da nota..."
+                value={title}
+                onChange={handleTitleChange}
+                className="text-base md:text-lg font-medium border-0 px-2 md:px-3 py-1.5 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
+              />
+              {openReadMode ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleSave}
-                  className="gap-2"
+                  className="ml-auto"
+                  onClick={() => setOpenReadMode(false)}
                 >
-                  <Save className="h-4 w-4" />
-                  <span className="hidden sm:inline">Salvar</span>
+                  Sair do modo leitura
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Excluir</span>
-                </Button>
-              </div>
+              ) : (
+                <EditorOptionsSheet
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                  onReadMode={() => setOpenReadMode(true)}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -294,58 +307,11 @@ export default function EditNotePage() {
               onChange={handleContentChange}
               initialValue={content}
               className="h-full"
-              showToolbar={true}
+              showToolbar={!openReadMode}
+              openReadMode={openReadMode}
+              onOpenReadMode={() => setOpenReadMode(true)}
+              onCloseReadMode={() => setOpenReadMode(false)}
             />
-          </div>
-        </div>
-      </div>
-
-      {/* Header Sticky para Mobile */}
-      <div
-        className={`fixed top-0 left-0 right-0 z-50 md:hidden transition-transform duration-300 ${
-          showStickyHeader ? "translate-y-0" : "-translate-y-full"
-        } border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`}
-      >
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </Button>
-
-            {/* Título editável centralizado no sticky header */}
-            <div className="flex-1 mx-3">
-              <Input
-                placeholder="Título da nota..."
-                value={title}
-                onChange={handleTitleChange}
-                className="text-sm font-medium text-center border-0 px-2 py-1 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
-              />
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSave}
-                className="p-2"
-              >
-                <Save className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                className="p-2"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </div>
       </div>
