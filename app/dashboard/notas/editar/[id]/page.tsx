@@ -32,12 +32,16 @@ type EditorOptionsSheetProps = {
   onSave: () => void;
   onDelete: () => void;
   onReadMode: () => void;
+  selectedTags: string[];
+  onTagsChange: (tags: string[]) => void;
 };
 
 function EditorOptionsSheet({
   onSave,
   onDelete,
   onReadMode,
+  selectedTags,
+  onTagsChange,
 }: EditorOptionsSheetProps) {
   return (
     <Sheet>
@@ -86,6 +90,15 @@ function EditorOptionsSheet({
               Apagar arquivo
             </Button>
           </SheetClose>
+        </div>
+        <div className="p-4 border-t">
+          <div className="text-sm font-medium mb-2">Tags</div>
+          <TagSelector
+            selectedTags={selectedTags}
+            onTagsChange={onTagsChange}
+            placeholder="Adicionar tags..."
+            mode="id"
+          />
         </div>
       </SheetContent>
     </Sheet>
@@ -257,7 +270,7 @@ export default function EditNotePage() {
         {/* Header próprio do editor: título + botão para abrir sheet */}
         <div
           className={`flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
-            !openReadMode ? "sticky top-0 z-10" : ""
+            !openReadMode ? "sticky top-0 z-10 " : ""
           }`}
         >
           <div className="px-4 md:px-6 py-2">
@@ -282,6 +295,8 @@ export default function EditNotePage() {
                   onSave={handleSave}
                   onDelete={handleDelete}
                   onReadMode={() => setOpenReadMode(true)}
+                  selectedTags={tags}
+                  onTagsChange={handleTagsChange}
                 />
               )}
             </div>
@@ -289,19 +304,9 @@ export default function EditNotePage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 md:flex md:flex-col md:overflow-hidden p-6">
-          {/* Tags */}
-          <div className="mb-4">
-            <TagSelector
-              selectedTags={tags}
-              onTagsChange={handleTagsChange}
-              placeholder="Adicionar tags..."
-              mode="id"
-            />
-          </div>
-
+        <div className="flex-1 md:flex md:flex-col md:overflow-hidden">
           {/* Editor */}
-          <div className="min-h-screen md:min-h-0 md:flex-1 pb-20">
+          <div className="min-h-screen md:min-h-0 md:flex-1 pb-12">
             <NoteEditorWithToolbar
               placeholder="Comece a escrever sua nota..."
               onChange={handleContentChange}
