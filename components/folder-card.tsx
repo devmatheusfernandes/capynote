@@ -67,7 +67,7 @@ export function FolderCard({
   return (
     <>
       <Card className="group hover:shadow-md transition-shadow cursor-pointer">
-        <CardContent className="p-4">
+        <CardContent className="">
           <div className="flex items-center justify-between">
             <div
               className="flex items-center space-x-3 flex-1 min-w-0"
@@ -103,12 +103,12 @@ export function FolderCard({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="default"
                   size="sm"
                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="h-4 w-4 text-primary" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

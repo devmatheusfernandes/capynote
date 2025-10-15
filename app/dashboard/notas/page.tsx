@@ -11,6 +11,7 @@ import {
   Edit,
   FileText,
   FolderPlus,
+  FilePlus2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -395,7 +396,7 @@ export default function NotasPage() {
   );
 
   return (
-    <div className="container mx-auto p-6 sm:max-w-[80vw] max-w-[100vw]">
+    <div className="container sm:p-6 p-4 sm:max-w-[80vw] max-w-[100vw]">
       {/* Header */}
       <PageHeader
         title="Notas"
@@ -403,11 +404,11 @@ export default function NotasPage() {
           <div className="flex flex-row items-center gap-2">
             <Button variant="outline" onClick={() => setCreateFolderOpen(true)}>
               <FolderPlus className="h-4 w-4" />
-              Nova Pasta
+              Pasta
             </Button>
             <Button variant="default" onClick={() => setNoteDrawerOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Nova Nota
+              <FilePlus2 className="h-4 w-4" />
+              Nota
             </Button>
           </div>
         }
@@ -496,7 +497,7 @@ export default function NotasPage() {
             >
               <CardHeader className="">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg line-clamp-2 transition-colors">
+                  <CardTitle className="text-md line-clamp-2 transition-colors">
                     {note.title || "Nota sem título"}
                   </CardTitle>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -507,7 +508,7 @@ export default function NotasPage() {
                         e.stopPropagation();
                         handleEditNote(note.id);
                       }}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 text-primary"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -524,12 +525,11 @@ export default function NotasPage() {
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                <p className="text-sm text-muted-foreground line-clamp-3">
                   {getPreviewText(note.content)}
                 </p>
-
+              </CardHeader>
+              <CardContent>
                 {/* Tags */}
                 {(() => {
                   const tagNames =
