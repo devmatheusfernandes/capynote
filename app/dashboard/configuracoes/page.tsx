@@ -267,7 +267,10 @@ export default function ConfiguracoesPage() {
                 <div className="flex flex-wrap gap-2">
                   {availableTags.map((tag) => (
                     <div key={tag.id} className="flex items-center gap-2">
-                      <Badge variant="secondary" className="px-2 py-1 text-xs sm:text-sm">
+                      <Badge
+                        variant="secondary"
+                        className="px-2 py-1 text-xs sm:text-sm"
+                      >
                         {tag.name}
                       </Badge>
                       <AlertDialog>
@@ -366,12 +369,13 @@ export default function ConfiguracoesPage() {
                 >
                   {notificationsEnabled ? "Desativar" : "Ativar"} notificações
                 </Button>
-                <Button className="w-full sm:w-auto" variant="secondary" onClick={testNotification}>
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="secondary"
+                  onClick={testNotification}
+                >
                   Testar notificação
                 </Button>
-                <span className="text-xs text-muted-foreground sm:ml-2 mt-1 sm:mt-0">
-                  Permissão: {permission}
-                </span>
               </div>
             </div>
 

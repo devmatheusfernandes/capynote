@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import SWRegister from "@/components/sw-register";
 import { AuthProvider } from "@/contexts/auth-context";
 
-const geistSans = Geist({
+const geistSans = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
@@ -16,23 +16,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Note Taking",
+  title: "CapyNotes",
   description: "Aplicativo de notas",
-  applicationName: "Note-taking",
-  manifest: "/manifest.webmanifest",
+  applicationName: "CapyNotes",
+  manifest: "/manifest.webmanifest?v=2",
   icons: {
     icon: [{ url: "/adaptive-icon.png", type: "image/png" }],
     apple: [{ url: "/adaptive-icon.png", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Note Taking",
+    statusBarStyle: "black-translucent",
+    title: "CapyNotes",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#111827",
+  themeColor: "#09090b",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
