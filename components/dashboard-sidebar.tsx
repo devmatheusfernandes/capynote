@@ -263,7 +263,18 @@ function MobileHeader() {
 
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideMobileHeader = pathname?.startsWith("/dashboard/notas/editar/") ?? false;
+  const isEditingNote = pathname?.startsWith("/dashboard/notas/editar/") ?? false;
+  const hideMobileHeader = isEditingNote;
+
+  // Quando estiver na página de edição de nota, não exibir o dashboard/sidebar
+  if (isEditingNote) {
+    return (
+      <div className="min-h-screen w-full bg-background">
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Save, Trash2, MoreVertical, BookOpen } from "lucide-react";
+import { Save, Trash2, MoreVertical, BookOpen, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -293,6 +293,17 @@ export default function EditNotePage() {
         >
           <div className="px-4 md:px-6 py-2">
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="shrink-0"
+                aria-label="Voltar"
+                title="Voltar"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Voltar</span>
+              </Button>
               <Input
                 placeholder="Título da nota..."
                 value={title}
@@ -306,7 +317,7 @@ export default function EditNotePage() {
                   className="ml-auto"
                   onClick={() => setOpenReadMode(false)}
                 >
-                  Sair do modo leitura
+                  Sair
                 </Button>
               ) : (
                 <EditorOptionsSheet
@@ -322,7 +333,7 @@ export default function EditNotePage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-16">
+        <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-12">
           {/* Editor */}
           <div className="min-h-screen md:min-h-0 md:flex-1 pb-12">
             <NoteEditorWithToolbar
