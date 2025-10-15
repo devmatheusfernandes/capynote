@@ -57,7 +57,7 @@ function EditorOptionsSheet({
       </SheetTrigger>
       <SheetContent side="right" className="p-0">
         <SheetHeader className="p-4 border-b">
-          <SheetTitle>Opções da nota</SheetTitle>
+          <SheetTitle>Opções</SheetTitle>
         </SheetHeader>
         <div className="p-4 space-y-2">
           <SheetClose asChild>
@@ -119,6 +119,8 @@ export default function EditNotePage() {
   const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
   const [availableTags, setAvailableTags] = useState<TagData[]>([]);
   const [openReadMode, setOpenReadMode] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   // Load note from Firestore (real-time)
   useEffect(() => {
@@ -161,7 +163,25 @@ export default function EditNotePage() {
     return () => unsub();
   }, [user?.id]);
 
-  // Removido: sticky header de mobile para maximizar espaço da tela do editor
+  // Controle de scroll para modo leitura e edição
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setShowHeader(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        // Scrolling down and past threshold
+        setShowHeader(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   // Auto-save functionality
   const saveNote = useCallback(async () => {
@@ -254,8 +274,6 @@ export default function EditNotePage() {
     }
   }, [noteId, router, user?.id]);
 
-  // Sem botão de voltar nesta tela para otimizar espaço
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -269,8 +287,8 @@ export default function EditNotePage() {
       <div className="min-h-screen md:h-screen md:flex md:flex-col">
         {/* Header próprio do editor: título + botão para abrir sheet */}
         <div
-          className={`flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
-            !openReadMode ? "sticky top-0 z-10 " : ""
+          className={`flex-shrink-0 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 transition-transform duration-300 fixed top-0 left-0 right-0 z-10 ${
+            showHeader ? "translate-y-0" : "-translate-y-full"
           }`}
         >
           <div className="px-4 md:px-6 py-2">
@@ -304,7 +322,7 @@ export default function EditNotePage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 md:flex md:flex-col md:overflow-hidden">
+        <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-16">
           {/* Editor */}
           <div className="min-h-screen md:min-h-0 md:flex-1 pb-12">
             <NoteEditorWithToolbar
