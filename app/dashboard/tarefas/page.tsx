@@ -51,6 +51,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { TaskDrawer } from "@/components/task-drawer";
 import { PageHeader } from "@/components/page-header";
 import { TagSelector } from "@/components/tag-selector";
+import SyncDot from "@/components/sync-dot";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -201,6 +202,15 @@ export default function TarefasPage() {
         return task;
       });
 
+      // Track pending writes per task
+      const pendingMap: Record<string, boolean> = {};
+      snapshot.docs.forEach((d) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const meta: any = (d as any).metadata;
+        pendingMap[d.id] = Boolean(meta?.hasPendingWrites);
+      });
+      setTaskPendingById(pendingMap);
+
       // Sort by priority and then by updatedAt
       const sortedTasks = fetched.sort((a: TaskData, b: TaskData) => {
         const priorityOrder = { alta: 3, media: 2, baixa: 1 };
@@ -217,6 +227,8 @@ export default function TarefasPage() {
 
     return () => unsubscribe();
   }, [user?.id]);
+
+  const [taskPendingById, setTaskPendingById] = useState<Record<string, boolean>>({});
 
   interface TasksMeta {
     completedOccurrences?: string[];
@@ -931,7 +943,16 @@ export default function TarefasPage() {
                     setTaskDrawerOpen(true);
                   }}
                 >
-                  {truncateWords(task.title, isMobile ? 6 : 12)}
+                  <span className="inline-flex items-center gap-2">
+                    {/* Use base ID for occurrences */}
+                    {(() => {
+                      const baseId = task.id.includes("_occurrence_")
+                        ? task.id.split("_occurrence_")[0]
+                        : task.id;
+                      return <SyncDot pending={taskPendingById[baseId]} size={8} />;
+                    })()}
+                    {truncateWords(task.title, isMobile ? 6 : 12)}
+                  </span>
                 </h3>
                 {/* Show recurring indicator and specific date */}
                 {isRecurringOccurrence && (
@@ -1145,7 +1166,13 @@ export default function TarefasPage() {
                   }}
                 />
               )}
-              <CardTitle className="text-xs font-medium line-clamp-2 flex-1">
+              <CardTitle className="text-xs font-medium line-clamp-2 flex-1 flex items-center gap-2">
+                {(() => {
+                  const baseId = task.id.includes("_occurrence_")
+                    ? task.id.split("_occurrence_")[0]
+                    : task.id;
+                  return <SyncDot pending={taskPendingById[baseId]} size={8} />;
+                })()}
                 {task.title}
               </CardTitle>
             </div>

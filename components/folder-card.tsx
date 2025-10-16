@@ -29,6 +29,7 @@ interface FolderCardProps {
   onOpen: (folderId: string) => void;
   onRename: (folderId: string, newName: string) => void;
   onDelete: (folderId: string) => void;
+  syncPending?: boolean;
 }
 
 export function FolderCard({
@@ -37,6 +38,7 @@ export function FolderCard({
   onOpen,
   onRename,
   onDelete,
+  syncPending,
 }: FolderCardProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(folder.name);
@@ -73,8 +75,15 @@ export function FolderCard({
               className="flex items-center space-x-3 flex-1 min-w-0"
               onClick={() => !isRenaming && onOpen(folder.id)}
             >
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 relative">
                 <Folder className="h-8 w-8 text-primary" />
+                <span
+                  className={`absolute -top-1 -right-1 h-2 w-2 rounded-full ${
+                    syncPending ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
+                  title={syncPending ? "Somente offline, aguardando upload" : "Sincronizado"}
+                  aria-label={syncPending ? "Alterações pendentes (offline)" : "Sincronizado"}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 {isRenaming ? (

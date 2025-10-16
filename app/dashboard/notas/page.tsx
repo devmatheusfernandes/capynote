@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { NoteDrawer } from "@/components/note-drawer";
+import SyncDot from "@/components/sync-dot";
 import { PageHeader } from "@/components/page-header";
 import { TagSelector } from "@/components/tag-selector";
 import { FolderCard } from "@/components/folder-card";
@@ -51,6 +52,8 @@ export default function NotasPage() {
   const { user } = useAuth();
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [folders, setFolders] = useState<FolderData[]>([]);
+  const [notePendingById, setNotePendingById] = useState<Record<string, boolean>>({});
+  const [folderPendingById, setFolderPendingById] = useState<Record<string, boolean>>({});
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(
     undefined
   );
@@ -73,9 +76,17 @@ export default function NotasPage() {
     const foldersRef = collection(db, "users", user.id, "folders");
 
     const unsubNotes = onSnapshot(notesRef, (snapshot) => {
-      const fetchedNotes: NoteData[] = snapshot.docs.map(
-        (d) => d.data() as NoteData
-      );
+      const fetchedNotes: NoteData[] = snapshot.docs.map((d) => d.data() as NoteData);
+      // Track pending writes per note (offline-only until acknowledged by server)
+      const pendingMap: Record<string, boolean> = {};
+      snapshot.docs.forEach((d) => {
+        // QueryDocumentSnapshot has metadata.hasPendingWrites
+        // If true, it means local changes not yet committed
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const meta: any = (d as any).metadata;
+        pendingMap[d.id] = Boolean(meta?.hasPendingWrites);
+      });
+      setNotePendingById(pendingMap);
       const sortedNotes = fetchedNotes.sort(
         (a: NoteData, b: NoteData) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -84,9 +95,14 @@ export default function NotasPage() {
     });
 
     const unsubFolders = onSnapshot(foldersRef, (snapshot) => {
-      const fetchedFolders: FolderData[] = snapshot.docs.map(
-        (d) => d.data() as FolderData
-      );
+      const fetchedFolders: FolderData[] = snapshot.docs.map((d) => d.data() as FolderData);
+      const pendingMap: Record<string, boolean> = {};
+      snapshot.docs.forEach((d) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const meta: any = (d as any).metadata;
+        pendingMap[d.id] = Boolean(meta?.hasPendingWrites);
+      });
+      setFolderPendingById(pendingMap);
       setFolders(fetchedFolders);
     });
 
@@ -485,6 +501,7 @@ export default function NotasPage() {
               onOpen={handleOpenFolder}
               onRename={handleRenameFolder}
               onDelete={handleDeleteFolder}
+              syncPending={folderPendingById[folder.id]}
             />
           ))}
 
@@ -497,9 +514,12 @@ export default function NotasPage() {
             >
               <CardHeader className="">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-md line-clamp-2 transition-colors">
-                    {note.title || "Nota sem título"}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <SyncDot pending={notePendingById[note.id]} />
+                    <CardTitle className="text-md line-clamp-2 transition-colors">
+                      {note.title || "Nota sem título"}
+                    </CardTitle>
+                  </div>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"

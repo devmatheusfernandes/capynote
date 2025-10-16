@@ -27,6 +27,7 @@ import {
 } from "firebase/firestore";
 import { NoteData, TagData } from "@/types";
 import CapybaraLoader from "@/components/capybaraLoader";
+import { Badge } from "@/components/ui/badge";
 
 type EditorOptionsSheetProps = {
   onSave: () => void;
@@ -121,6 +122,7 @@ export default function EditNotePage() {
   const [openReadMode, setOpenReadMode] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [pendingWrites, setPendingWrites] = useState<boolean>(false);
 
   // Load note from Firestore (real-time)
   useEffect(() => {
@@ -134,6 +136,10 @@ export default function EditNotePage() {
         setTags(data.tagIds || data.tags || []);
         setCreatedAt(data.createdAt);
       }
+      // Update sync status indicator
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meta: any = (snapshot as any).metadata;
+      setPendingWrites(Boolean(meta?.hasPendingWrites));
       setIsLoading(false);
     });
     return () => unsub();
@@ -310,6 +316,13 @@ export default function EditNotePage() {
                 onChange={handleTitleChange}
                 className="text-base md:text-lg font-medium border-0 px-2 md:px-3 py-1.5 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
               />
+              <Badge
+                variant="outline"
+                className={`text-xs ${pendingWrites ? "border-amber-300 text-amber-700" : "border-emerald-300 text-emerald-700"}`}
+                title={pendingWrites ? "Somente offline, aguardando upload" : "Sincronizado com o banco"}
+              >
+                {pendingWrites ? "Offline (pendente)" : "Sincronizado"}
+              </Badge>
               {openReadMode ? (
                 <Button
                   variant="outline"

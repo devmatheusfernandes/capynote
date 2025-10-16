@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,6 +19,30 @@ export const auth = getAuth(app);
 
 // Initialize Firestore and export reference
 export const db = getFirestore(app);
+
+// Enable offline persistence (IndexedDB) with graceful fallback
+// Only run in browser environments
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err: any) => {
+    const code = err?.code || "unknown";
+    if (code === "failed-precondition") {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time
+      console.warn(
+        "Firestore persistence não habilitada: já ativa em outra aba."
+      );
+    } else if (code === "unimplemented") {
+      // The current browser does not support all features required to enable persistence
+      console.warn(
+        "Firestore persistence não suportada neste navegador (IndexedDB)."
+      );
+    } else {
+      console.error(
+        "Falha ao habilitar Firestore offline persistence:",
+        err
+      );
+    }
+  });
+}
 
 // Initialize Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
