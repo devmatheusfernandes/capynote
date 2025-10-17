@@ -1,31 +1,32 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { XIcon } from "lucide-react"
+import * as React from "react";
+import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { DotSquare, ImportIcon, XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
 function SheetTrigger({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
 function SheetClose({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
+  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
 
 function SheetPortal({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
 function SheetOverlay({
@@ -41,7 +42,7 @@ function SheetOverlay({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function SheetContent({
@@ -50,7 +51,7 @@ function SheetContent({
   side = "right",
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left"
+  side?: "top" | "right" | "bottom" | "left";
 }) {
   return (
     <SheetPortal>
@@ -78,7 +79,7 @@ function SheetContent({
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
-  )
+  );
 }
 
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -88,7 +89,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("flex flex-col gap-1.5 p-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -98,7 +99,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("mt-auto flex flex-col gap-2 p-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SheetTitle({
@@ -111,7 +112,7 @@ function SheetTitle({
       className={cn("text-foreground font-semibold", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SheetDescription({
@@ -124,7 +125,68 @@ function SheetDescription({
       className={cn("text-muted-foreground text-sm", className)}
       {...props}
     />
-  )
+  );
+}
+
+type ExportImportSheetProps = {
+  onExportMarkdown: () => void;
+  onBackupAll: () => void;
+  onImportNotes: () => void;
+  onRestoreBackup: () => void;
+  trigger?: React.ReactNode;
+};
+
+function ExportImportSheet({
+  onExportMarkdown,
+  onBackupAll,
+  onImportNotes,
+  onRestoreBackup,
+  trigger,
+}: ExportImportSheetProps) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        {trigger ?? (
+          <Button variant="outline">
+            <ImportIcon />
+          </Button>
+        )}
+      </SheetTrigger>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>Exportar / Importar</SheetTitle>
+          <SheetDescription>
+            Ações de exportação e importação de notas e backup.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="p-4 flex flex-col gap-6">
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Exportar</div>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" onClick={onExportMarkdown}>
+                Exportar notas
+              </Button>
+              <Button variant="outline" onClick={onBackupAll}>
+                Backup completo
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Importar</div>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" onClick={onImportNotes}>
+                Importar notas nesta pasta
+              </Button>
+              <Button variant="outline" onClick={onRestoreBackup}>
+                Restaurar backup
+              </Button>
+            </div>
+          </div>
+        </div>
+        <SheetFooter />
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 export {
@@ -136,4 +198,5 @@ export {
   SheetFooter,
   SheetTitle,
   SheetDescription,
-}
+  ExportImportSheet,
+};

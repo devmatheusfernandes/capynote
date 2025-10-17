@@ -23,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { ExportImportSheet } from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -649,35 +650,12 @@ export default function NotasPage() {
               <FilePlus2 className="h-4 w-4" />
               Nota
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">Exportar</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportJSONFiltered}>
-                  Exportar notas (JSON)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportMarkdownFiltered}>
-                  Exportar notas (Markdown)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBackupAll}>
-                  Backup completo (JSON)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">Importar</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={triggerImportFile}>
-                  Importar nota(s) (JSON/Markdown) nesta pasta
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={triggerRestoreFile}>
-                  Restaurar backup (merge)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ExportImportSheet
+              onExportMarkdown={handleExportMarkdownFiltered}
+              onBackupAll={handleBackupAll}
+              onImportNotes={triggerImportFile}
+              onRestoreBackup={triggerRestoreFile}
+            />
             <input
               ref={importFileInputRef}
               type="file"
@@ -824,7 +802,7 @@ export default function NotasPage() {
                         align="end"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                           onClick={() => {
                             const json = exportNotesAsJSON([note]);
                             downloadFile(
@@ -835,7 +813,7 @@ export default function NotasPage() {
                           }}
                         >
                           Exportar (JSON)
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuItem
                           onClick={() => {
                             const md = exportNotesAsMarkdown(
@@ -850,7 +828,7 @@ export default function NotasPage() {
                             );
                           }}
                         >
-                          Exportar (Markdown)
+                          Exportar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { parseJSONFile, mergeNotes, mergeFolders, mergeTags } from "@/lib/import-utils";
+import { NoteData, FolderData } from "@/types";
 import { Trash2, Tag } from "lucide-react";
 import {
   AlertDialog,
@@ -61,6 +63,7 @@ export default function ConfiguracoesPage() {
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
+  const restoreFileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Assinar tags do Firestore por usuário
   useEffect(() => {
@@ -245,6 +248,83 @@ export default function ConfiguracoesPage() {
     } finally {
       setIsBackingUp(false);
     }
+  };
+
+  const triggerRestoreFile = () => {
+    restoreFileInputRef.current?.click();
+  };
+
+  const onRestoreFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    try {
+      const text = await file.text();
+      const parsed = parseJSONFile(text) as any;
+      const incomingNotes: NoteData[] = parsed.notes || [];
+      const incomingFolders: FolderData[] = parsed.folders || [];
+      const incomingTags: TagData[] = parsed.tags || [];
+
+      // Fetch current data to merge
+      const [notesSnap, foldersSnap, tagsSnap] = await Promise.all([
+        getDocs(collection(db, "users", user.id, "notes")),
+        getDocs(collection(db, "users", user.id, "folders")),
+        getDocs(collection(db, "users", user.id, "tags")),
+      ]);
+      const currentNotes: NoteData[] = notesSnap.docs.map((d) => d.data() as NoteData);
+      const currentFolders: FolderData[] = foldersSnap.docs.map((d) => d.data() as FolderData);
+      const currentTags: TagData[] = tagsSnap.docs.map((d) => {
+        const t = d.data() as TagData;
+        return {
+          id: t.id || d.id,
+          name: t.name || d.id,
+          createdAt: t.createdAt ? String(t.createdAt) : new Date().toISOString(),
+          updatedAt: t.updatedAt ? String(t.updatedAt) : new Date().toISOString(),
+          color: t.color,
+        };
+      });
+
+      const mergedNotes = mergeNotes(currentNotes, incomingNotes);
+      const mergedFolders = mergeFolders(currentFolders, incomingFolders);
+      const mergedTags = mergeTags(currentTags, incomingTags);
+
+      await Promise.all(
+        mergedFolders.map((f) => {
+          const payload = Object.fromEntries(
+            Object.entries(f).filter(([, v]) => v !== undefined)
+          );
+          return setDoc(doc(db, "users", user.id, "folders", f.id), payload, {
+            merge: true,
+          });
+        })
+      );
+      await Promise.all(
+        mergedTags.map((t) => {
+          const payload = Object.fromEntries(
+            Object.entries(t).filter(([, v]) => v !== undefined)
+          );
+          return setDoc(doc(db, "users", user.id, "tags", t.id), payload, {
+            merge: true,
+          });
+        })
+      );
+      await Promise.all(
+        mergedNotes.map((n) => {
+          const payload = Object.fromEntries(
+            Object.entries(n).filter(([, v]) => v !== undefined)
+          );
+          return setDoc(doc(db, "users", user.id, "notes", n.id), payload, {
+            merge: true,
+          });
+        })
+      );
+      toast.success("Backup restaurado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Falha ao restaurar backup. Verifique o arquivo.");
+    }
+    e.target.value = "";
   };
 
   const changeBackupInterval = async (value: string) => {
@@ -521,6 +601,13 @@ export default function ConfiguracoesPage() {
               >
                 {autoBackupEnabled ? "Desativar" : "Ativar"} backup automático
               </Button>
+              <Button
+                className="w-full sm:w-auto"
+                variant="outline"
+                onClick={triggerRestoreFile}
+              >
+                Restaurar backup
+              </Button>
             </div>
 
             <div className="space-y-3">
@@ -560,6 +647,13 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
       </div>
+      <input
+        ref={restoreFileInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={onRestoreFileChange}
+      />
     </div>
   );
 }
