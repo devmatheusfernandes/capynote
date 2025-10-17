@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `capynotes-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
@@ -8,7 +8,13 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(CACHE_NAME);
       const assets = [
+        // App shell and key routes so the app is usable offline
         new Request(OFFLINE_URL, { cache: "reload" }),
+        new Request("/", { cache: "reload" }),
+        new Request("/dashboard", { cache: "reload" }),
+        new Request("/dashboard/notas", { cache: "reload" }),
+        new Request("/dashboard/tarefas", { cache: "reload" }),
+        // Manifest and icons
         "/manifest.webmanifest",
         "/adaptive-icon.png",
       ];
@@ -55,16 +61,35 @@ self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(CACHE_NAME);
         try {
           const preloadResp = await event.preloadResponse;
           if (preloadResp) return preloadResp;
-
           const networkResp = await fetch(event.request);
+          // Cache successful navigations to enable offline revisits
+          if (networkResp && networkResp.status === 200) {
+            try {
+              await cache.put(event.request, networkResp.clone());
+            } catch (_) {
+              // Ignore cache put errors
+            }
+          }
           return networkResp;
         } catch (error) {
-          const cache = await caches.open(CACHE_NAME);
-          const cachedResp = await cache.match(OFFLINE_URL);
-          return cachedResp || new Response("Offline", { status: 503 });
+          // Try the exact requested page from cache
+          const cachedPage = await cache.match(event.request);
+          if (cachedPage) return cachedPage;
+
+          // Try app shell routes from cache to keep the app usable offline
+          const appShellCandidates = ["/dashboard", "/"]; // prioritize dashboard, then home
+          for (const route of appShellCandidates) {
+            const resp = await cache.match(route);
+            if (resp) return resp;
+          }
+
+          // Last resort: offline page
+          const offlineResp = await cache.match(OFFLINE_URL);
+          return offlineResp || new Response("Offline", { status: 503 });
         }
       })()
     );

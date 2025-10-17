@@ -72,8 +72,12 @@ export default function NotasPage() {
   const { user } = useAuth();
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [folders, setFolders] = useState<FolderData[]>([]);
-  const [notePendingById, setNotePendingById] = useState<Record<string, boolean>>({});
-  const [folderPendingById, setFolderPendingById] = useState<Record<string, boolean>>({});
+  const [notePendingById, setNotePendingById] = useState<
+    Record<string, boolean>
+  >({});
+  const [folderPendingById, setFolderPendingById] = useState<
+    Record<string, boolean>
+  >({});
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(
     undefined
   );
@@ -98,7 +102,9 @@ export default function NotasPage() {
     const foldersRef = collection(db, "users", user.id, "folders");
 
     const unsubNotes = onSnapshot(notesRef, (snapshot) => {
-      const fetchedNotes: NoteData[] = snapshot.docs.map((d) => d.data() as NoteData);
+      const fetchedNotes: NoteData[] = snapshot.docs.map(
+        (d) => d.data() as NoteData
+      );
       // Track pending writes per note (offline-only until acknowledged by server)
       const pendingMap: Record<string, boolean> = {};
       snapshot.docs.forEach((d) => {
@@ -117,7 +123,9 @@ export default function NotasPage() {
     });
 
     const unsubFolders = onSnapshot(foldersRef, (snapshot) => {
-      const fetchedFolders: FolderData[] = snapshot.docs.map((d) => d.data() as FolderData);
+      const fetchedFolders: FolderData[] = snapshot.docs.map(
+        (d) => d.data() as FolderData
+      );
       const pendingMap: Record<string, boolean> = {};
       snapshot.docs.forEach((d) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,24 +286,36 @@ export default function NotasPage() {
   // Export handlers (filtered scope = por pasta ou por tag)
   const handleExportJSONFiltered = useCallback(() => {
     const json = exportNotesAsJSON(filteredNotes);
-    const filename = currentFolderId ? `notas_${currentFolderId}.json` : "notas_root.json";
+    const filename = currentFolderId
+      ? `notas_${currentFolderId}.json`
+      : "notas_root.json";
     downloadFile(filename, json, "application/json");
   }, [filteredNotes, currentFolderId]);
 
   const handleExportMarkdownFiltered = useCallback(() => {
     const md = exportNotesAsMarkdown(filteredNotes, folders, tagsById);
-    const filename = currentFolderId ? `notas_${currentFolderId}.md` : "notas_root.md";
+    const filename = currentFolderId
+      ? `notas_${currentFolderId}.md`
+      : "notas_root.md";
     downloadFile(filename, md, "text/markdown");
   }, [filteredNotes, folders, tagsById, currentFolderId]);
 
   const handleBackupAll = useCallback(() => {
     const payload = buildBackupPayload(notes, folders, availableTags);
     const json = JSON.stringify(payload, null, 2);
-    const filename = `capynotes_backup_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    const filename = `capynotes_backup_${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.json`;
     downloadFile(filename, json, "application/json");
     try {
       const history = JSON.parse(localStorage.getItem("backupHistory") || "[]");
-      history.push({ filename, at: new Date().toISOString(), notes: notes.length, folders: folders.length, tags: availableTags.length });
+      history.push({
+        filename,
+        at: new Date().toISOString(),
+        notes: notes.length,
+        folders: folders.length,
+        tags: availableTags.length,
+      });
       localStorage.setItem("backupHistory", JSON.stringify(history));
     } catch {}
   }, [notes, folders, availableTags]);
@@ -310,22 +330,16 @@ export default function NotasPage() {
       const file = e.target.files?.[0];
       if (!file || !user?.id) return;
       const text = await file.text();
-      // Debug: log file metadata and raw content
-      console.log("[Import] Selected file:", {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      });
-      console.log("[Import] File content (raw):\n", text);
       const isMarkdown =
-        file.name.toLowerCase().endsWith(".md") || file.type === "text/markdown";
-      console.log("[Import] Detected markdown?", isMarkdown);
+        file.name.toLowerCase().endsWith(".md") ||
+        file.type === "text/markdown";
       if (isMarkdown) {
         // Import single markdown as one note
         const content = markdownToLexical(text);
-        console.log("[Import] Converted Lexical JSON from Markdown:", content);
-        const title = deriveTitleFromMarkdown(text, file.name.replace(/\.md$/, ""));
-        console.log("[Import] Derived title:", title);
+        const title = deriveTitleFromMarkdown(
+          text,
+          file.name.replace(/\.md$/, "")
+        );
         const noteRef = doc(collection(db, "users", user.id, "notes"));
         const note: NoteData = {
           id: noteRef.id,
@@ -340,13 +354,10 @@ export default function NotasPage() {
         const payload = Object.fromEntries(
           Object.entries(note).filter(([, v]) => v !== undefined)
         );
-        console.log("[Import] Saving note payload:", payload);
         await setDoc(noteRef, payload);
-        console.log("[Import] Note saved with id:", noteRef.id);
       } else {
         // JSON: pode ser nota única, array de notas
         const parsed = parseJSONFile(text);
-        console.log("[Import] Parsed JSON:", parsed);
         if (Array.isArray(parsed)) {
           await Promise.all(
             parsed.map(async (n) => {
@@ -364,14 +375,18 @@ export default function NotasPage() {
               const payload = Object.fromEntries(
                 Object.entries(note).filter(([, v]) => v !== undefined)
               );
-              console.log("[Import] Saving array note payload:", payload);
               await setDoc(noteRef, payload);
-              console.log("[Import] Note saved with id:", noteRef.id);
             })
           );
-        } else if ((parsed as any)?.notes || (parsed as any)?.folders || (parsed as any)?.tags) {
+        } else if (
+          (parsed as any)?.notes ||
+          (parsed as any)?.folders ||
+          (parsed as any)?.tags
+        ) {
           // Se for payload de backup, sugerimos usar a ação de Restore
-          alert("Este arquivo parece um backup. Use 'Restaurar backup' para mesclar os dados.");
+          alert(
+            "Este arquivo parece um backup. Use 'Restaurar backup' para mesclar os dados."
+          );
         } else {
           const n = parsed as NoteData;
           const noteRef = doc(collection(db, "users", user.id, "notes"));
@@ -388,14 +403,11 @@ export default function NotasPage() {
           const payload = Object.fromEntries(
             Object.entries(note).filter(([, v]) => v !== undefined)
           );
-          console.log("[Import] Saving single note payload:", payload);
           await setDoc(noteRef, payload);
-          console.log("[Import] Note saved with id:", noteRef.id);
         }
       }
       // limpa input
       e.target.value = "";
-      console.log("[Import] Import finished.");
     },
     [user?.id, currentFolderId, db]
   );
@@ -425,7 +437,9 @@ export default function NotasPage() {
             const payload = Object.fromEntries(
               Object.entries(f).filter(([, v]) => v !== undefined)
             );
-            return setDoc(doc(db, "users", user.id, "folders", f.id), payload, { merge: true });
+            return setDoc(doc(db, "users", user.id, "folders", f.id), payload, {
+              merge: true,
+            });
           })
         );
         await Promise.all(
@@ -433,7 +447,9 @@ export default function NotasPage() {
             const payload = Object.fromEntries(
               Object.entries(t).filter(([, v]) => v !== undefined)
             );
-            return setDoc(doc(db, "users", user.id, "tags", t.id), payload, { merge: true });
+            return setDoc(doc(db, "users", user.id, "tags", t.id), payload, {
+              merge: true,
+            });
           })
         );
         await Promise.all(
@@ -441,7 +457,9 @@ export default function NotasPage() {
             const payload = Object.fromEntries(
               Object.entries(n).filter(([, v]) => v !== undefined)
             );
-            return setDoc(doc(db, "users", user.id, "notes", n.id), payload, { merge: true });
+            return setDoc(doc(db, "users", user.id, "notes", n.id), payload, {
+              merge: true,
+            });
           })
         );
       } catch (err) {
@@ -633,9 +651,7 @@ export default function NotasPage() {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Exportar
-                </Button>
+                <Button variant="outline">Exportar</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleExportJSONFiltered}>
@@ -651,9 +667,7 @@ export default function NotasPage() {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Importar
-                </Button>
+                <Button variant="outline">Importar</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={triggerImportFile}>
@@ -803,23 +817,37 @@ export default function NotasPage() {
                           className="h-8 w-8 p-0"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="sr-only">Mais ações</span>
-                          ⋮
+                          <span className="sr-only">Mais ações</span>⋮
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuContent
+                        align="end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <DropdownMenuItem
                           onClick={() => {
                             const json = exportNotesAsJSON([note]);
-                            downloadFile(`${note.title || note.id}.json`, json, "application/json");
+                            downloadFile(
+                              `${note.title || note.id}.json`,
+                              json,
+                              "application/json"
+                            );
                           }}
                         >
                           Exportar (JSON)
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const md = exportNotesAsMarkdown([note], folders, tagsById);
-                            downloadFile(`${note.title || note.id}.md`, md, "text/markdown");
+                            const md = exportNotesAsMarkdown(
+                              [note],
+                              folders,
+                              tagsById
+                            );
+                            downloadFile(
+                              `${note.title || note.id}.md`,
+                              md,
+                              "text/markdown"
+                            );
                           }}
                         >
                           Exportar (Markdown)
