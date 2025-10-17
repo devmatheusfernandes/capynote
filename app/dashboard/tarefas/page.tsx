@@ -228,7 +228,9 @@ export default function TarefasPage() {
     return () => unsubscribe();
   }, [user?.id]);
 
-  const [taskPendingById, setTaskPendingById] = useState<Record<string, boolean>>({});
+  const [taskPendingById, setTaskPendingById] = useState<
+    Record<string, boolean>
+  >({});
 
   interface TasksMeta {
     completedOccurrences?: string[];
@@ -949,9 +951,11 @@ export default function TarefasPage() {
                       const baseId = task.id.includes("_occurrence_")
                         ? task.id.split("_occurrence_")[0]
                         : task.id;
-                      return <SyncDot pending={taskPendingById[baseId]} size={8} />;
+                      return (
+                        <SyncDot pending={taskPendingById[baseId]} size={8} />
+                      );
                     })()}
-                    {truncateWords(task.title, isMobile ? 6 : 12)}
+                    {truncateWords(task.title, isMobile ? 4 : 12)}
                   </span>
                 </h3>
                 {/* Show recurring indicator and specific date */}
@@ -1040,7 +1044,7 @@ export default function TarefasPage() {
 
               {/* Priority indicator */}
               <div
-                className={`w-3 h-3 rounded-full ${getPriorityColor(
+                className={`hidden sm:block w-3 h-3 rounded-full ${getPriorityColor(
                   task.priority
                 )}`}
               />
@@ -1048,7 +1052,9 @@ export default function TarefasPage() {
               {/* Status badge */}
               <Badge
                 variant="outline"
-                className={`text-xs ${getStatusColor(task.status)}`}
+                className={`hidden sm:block text-xs ${getStatusColor(
+                  task.status
+                )}`}
               >
                 {task.status === "em-progresso"
                   ? "Em Progresso"
@@ -1070,7 +1076,7 @@ export default function TarefasPage() {
                     setEditingTask(taskToEdit);
                     setTaskDrawerOpen(true);
                   }}
-                  className="h-8 w-8 p-0"
+                  className="hidden sm:block h-8 w-8 p-0"
                 >
                   <Edit className="h-3 w-3" />
                 </Button>
@@ -1130,7 +1136,7 @@ export default function TarefasPage() {
         {...listeners}
         className="py-1 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
       >
-        <CardHeader>
+        <CardHeader className="px-2">
           <div className="flex">
             <div className="flex items-center gap-2 flex-1">
               {showCheckbox && (
@@ -1171,7 +1177,13 @@ export default function TarefasPage() {
                   const baseId = task.id.includes("_occurrence_")
                     ? task.id.split("_occurrence_")[0]
                     : task.id;
-                  return <SyncDot pending={taskPendingById[baseId]} size={8} />;
+                  return (
+                    <SyncDot
+                      className={isMobile ? "hidden" : "block"}
+                      pending={taskPendingById[baseId]}
+                      size={8}
+                    />
+                  );
                 })()}
                 {task.title}
               </CardTitle>
@@ -1230,19 +1242,6 @@ export default function TarefasPage() {
                 </div>
               )}
 
-              {!showCheckbox && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTaskStatus(task.id);
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                </Button>
-              )}
               {currentView === "kanban" && (
                 <Button
                   variant="ghost"
@@ -1260,7 +1259,13 @@ export default function TarefasPage() {
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent
+          className={
+            currentView === "kanban" && isMobile
+              ? "px-2 mb-2"
+              : "px-2 flex flex-col items-center space-y-2"
+          }
+        >
           {task.description && (
             <p className="text-sm text-gray-600 line-clamp-3">
               {task.description}

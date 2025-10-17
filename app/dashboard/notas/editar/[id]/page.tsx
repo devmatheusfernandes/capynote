@@ -318,10 +318,18 @@ export default function EditNotePage() {
               />
               <Badge
                 variant="outline"
-                className={`text-xs ${pendingWrites ? "border-amber-300 text-amber-700" : "border-emerald-300 text-emerald-700"}`}
-                title={pendingWrites ? "Somente offline, aguardando upload" : "Sincronizado com o banco"}
+                className={`text-xs ${
+                  pendingWrites
+                    ? "border-amber-300 text-amber-700"
+                    : "border-emerald-300 text-emerald-700"
+                }`}
+                title={
+                  pendingWrites
+                    ? "Somente offline, aguardando upload"
+                    : "Sincronizado com o banco"
+                }
               >
-                {pendingWrites ? "Offline (pendente)" : "Sincronizado"}
+                {pendingWrites ? "Offline" : "Sincronizado"}
               </Badge>
               {openReadMode ? (
                 <Button

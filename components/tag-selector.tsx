@@ -99,7 +99,9 @@ export function TagSelector({
   // Verificar se o input é uma nova tag
   const isNewTag =
     inputValue.trim().length > 0 &&
-    !availableTags.some((tag) => normalize(tag.name) === normalize(inputValue)) &&
+    !availableTags.some(
+      (tag) => normalize(tag.name) === normalize(inputValue)
+    ) &&
     !selectedTags.map((t) => normalize(t)).includes(normalize(inputValue));
 
   // Adicionar tag
@@ -175,7 +177,7 @@ export function TagSelector({
     <div className={cn("", className)}>
       {/* Tags selecionadas */}
       {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 mb-2">
           {selectedTags.map((tag) => {
             const tagName =
               mode === "id"
