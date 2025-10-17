@@ -1,11 +1,6 @@
-import { auth, db } from "./firebase";
+import { auth, db, googleProvider } from "./firebase";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  reauthenticateWithPopup,
-  linkWithPopup,
-} from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup, linkWithPopup } from "firebase/auth";
 import { buildBackupPayload } from "./export-utils";
 import { NoteData, FolderData, TagData } from "@/types";
 
@@ -15,23 +10,50 @@ type BackupResult = {
   error?: string;
 };
 
-async function getDriveAccessToken(): Promise<string> {
-  // Cria provider dedicado ao escopo do Drive e força consentimento
-  const provider = new GoogleAuthProvider();
-  provider.addScope("https://www.googleapis.com/auth/drive.file");
-  provider.setCustomParameters({ prompt: "consent" });
+// Cache simples de token do Drive no localStorage para reduzir popups
+function getCachedDriveToken(): string | null {
+  try {
+    const raw = localStorage.getItem("driveAccessToken");
+    const exp = Number(localStorage.getItem("driveAccessTokenExpiresAt") || 0);
+    if (!raw || !exp) return null;
+    const now = Date.now();
+    if (now < exp - 30_000) {
+      // margem de 30s para evitar expiração durante requisições
+      return raw;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedDriveToken(token: string, ttlMs = 55 * 60 * 1000) {
+  try {
+    localStorage.setItem("driveAccessToken", token);
+    localStorage.setItem(
+      "driveAccessTokenExpiresAt",
+      String(Date.now() + Math.max(60_000, ttlMs))
+    );
+  } catch {
+    // ignore
+  }
+}
+
+async function getDriveAccessToken(force = false): Promise<string> {
+  if (!force) {
+    const cached = getCachedDriveToken();
+    if (cached) return cached;
+  }
 
   let result;
   const current = auth.currentUser;
   if (current) {
     // Se o usuário não tem Google vinculado, tente vincular para obter o token
-    const hasGoogle = current.providerData?.some(
-      (p) => p.providerId === "google.com"
-    );
+    const hasGoogle = current.providerData?.some((p) => p.providerId === "google.com");
     try {
       result = hasGoogle
-        ? await reauthenticateWithPopup(current, provider)
-        : await linkWithPopup(current, provider);
+        ? await reauthenticateWithPopup(current, googleProvider)
+        : await linkWithPopup(current, googleProvider);
     } catch (err: unknown) {
       // Fallback: se vincular falhar por conta já vinculada ou conflito, reautentica
       const code = (err as unknown as { code?: string })?.code || "";
@@ -40,14 +62,14 @@ async function getDriveAccessToken(): Promise<string> {
         code === "auth/credential-already-in-use" ||
         code === "auth/account-exists-with-different-credential"
       ) {
-        result = await reauthenticateWithPopup(current, provider);
+        result = await reauthenticateWithPopup(current, googleProvider);
       } else {
         throw err;
       }
     }
   } else {
     // Não autenticado: abre popup do Google com escopo do Drive
-    result = await signInWithPopup(auth, provider);
+    result = await signInWithPopup(auth, googleProvider);
   }
 
   const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -57,6 +79,8 @@ async function getDriveAccessToken(): Promise<string> {
       "Falha ao obter token do Google Drive. Permita popups e aceite o acesso ao Drive."
     );
   }
+  // Assumimos validade ~55min e cacheamos para reduzir prompts
+  setCachedDriveToken(accessToken);
   return accessToken;
 }
 
@@ -184,16 +208,39 @@ async function uploadBackupFile(
 
 export async function driveBackupNow(userId: string): Promise<BackupResult> {
   try {
-    const token = await getDriveAccessToken();
+    let token = await getDriveAccessToken();
     const { notes, folders, tags } = await fetchUserDataForBackup(userId);
     const payload = buildBackupPayload(notes, folders, tags);
     const json = JSON.stringify(payload, null, 2);
 
-    const folderId = await ensureBackupFolder(token);
+    let folderId: string;
+    try {
+      folderId = await ensureBackupFolder(token);
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || String(err);
+      // Se token inválido/expirado, renova e tenta novamente uma vez
+      if (/401|invalid|expired|credentials/i.test(msg)) {
+        token = await getDriveAccessToken(true);
+        folderId = await ensureBackupFolder(token);
+      } else {
+        throw err;
+      }
+    }
+
     const filename = `capynotes-backup-${new Date()
       .toISOString()
       .replace(/[:\.]/g, "-")}.json`;
-    await uploadBackupFile(token, folderId, filename, json);
+    try {
+      await uploadBackupFile(token, folderId, filename, json);
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || String(err);
+      if (/401|invalid|expired|credentials/i.test(msg)) {
+        token = await getDriveAccessToken(true);
+        await uploadBackupFile(token, folderId, filename, json);
+      } else {
+        throw err;
+      }
+    }
 
     const lastBackupAt = new Date().toISOString();
     const settingsRef = doc(db, "users", userId, "meta", "settings");
