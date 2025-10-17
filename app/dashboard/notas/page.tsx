@@ -55,9 +55,9 @@ import {
 } from "firebase/firestore";
 import {
   downloadFile,
-  exportNotesAsJSON,
   exportNotesAsMarkdown,
   buildBackupPayload,
+  BackupPayload,
 } from "@/lib/export-utils";
 import {
   parseJSONFile,
@@ -284,14 +284,14 @@ export default function NotasPage() {
     getTagNameById,
   ]);
 
-  // Export handlers (filtered scope = por pasta ou por tag)
-  const handleExportJSONFiltered = useCallback(() => {
-    const json = exportNotesAsJSON(filteredNotes);
-    const filename = currentFolderId
-      ? `notas_${currentFolderId}.json`
-      : "notas_root.json";
-    downloadFile(filename, json, "application/json");
-  }, [filteredNotes, currentFolderId]);
+  // // Export handlers (filtered scope = por pasta ou por tag)
+  // const handleExportJSONFiltered = useCallback(() => {
+  //   const json = exportNotesAsJSON(filteredNotes);
+  //   const filename = currentFolderId
+  //     ? `notas_${currentFolderId}.json`
+  //     : "notas_root.json";
+  //   downloadFile(filename, json, "application/json");
+  // }, [filteredNotes, currentFolderId]);
 
   const handleExportMarkdownFiltered = useCallback(() => {
     const md = exportNotesAsMarkdown(filteredNotes, folders, tagsById);
@@ -380,9 +380,9 @@ export default function NotasPage() {
             })
           );
         } else if (
-          (parsed as any)?.notes ||
-          (parsed as any)?.folders ||
-          (parsed as any)?.tags
+          (parsed as BackupPayload)?.notes ||
+          (parsed as BackupPayload)?.folders ||
+          (parsed as BackupPayload)?.tags
         ) {
           // Se for payload de backup, sugerimos usar a ação de Restore
           alert(
@@ -410,7 +410,7 @@ export default function NotasPage() {
       // limpa input
       e.target.value = "";
     },
-    [user?.id, currentFolderId, db]
+    [user?.id, currentFolderId]
   );
 
   // Restore com merge a partir de backup JSON
@@ -424,7 +424,7 @@ export default function NotasPage() {
       if (!file || !user?.id) return;
       const text = await file.text();
       try {
-        const parsed = parseJSONFile(text) as any;
+        const parsed = parseJSONFile(text) as BackupPayload;
         const incomingNotes: NoteData[] = parsed.notes || [];
         const incomingFolders: FolderData[] = parsed.folders || [];
         const incomingTags: TagData[] = parsed.tags || [];
@@ -469,7 +469,7 @@ export default function NotasPage() {
       }
       e.target.value = "";
     },
-    [user?.id, notes, folders, availableTags, db]
+    [user?.id, notes, folders, availableTags]
   );
 
   // Format date for display

@@ -11,13 +11,19 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
-import type { EditorState } from "lexical";
+import type { EditorState, LexicalNode } from "lexical";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { TRANSFORMERS, $convertFromMarkdownString } from "@lexical/markdown";
-import { ParagraphNode, TextNode, $getRoot, $createParagraphNode, $createTextNode } from "lexical";
+import {
+  ParagraphNode,
+  TextNode,
+  $getRoot,
+  $createParagraphNode,
+  $createTextNode,
+} from "lexical";
 import {
   ObsidianPlugin,
   WikiLinkNode,
@@ -26,6 +32,17 @@ import {
 import Toolbar from "./toolbar";
 import "./note-editor.css";
 import React from "react";
+
+interface LexicalSerializedEditorState {
+  root: {
+    children: unknown[];
+    direction: string | null;
+    format: string;
+    indent: number;
+    type: string;
+    version: number;
+  };
+}
 
 const theme = {
   // Theme stylingf
@@ -170,12 +187,15 @@ function InitialValuePlugin({ initialValue }: { initialValue?: string }) {
       try {
         const normalized = normalizeSerializedState(initialValue);
         const parsed = JSON.parse(normalized);
-        const isLexicalJSON = parsed && parsed.root && typeof parsed.root === "object";
+        const isLexicalJSON =
+          parsed && parsed.root && typeof parsed.root === "object";
 
         if (isLexicalJSON) {
           const editorState = editor.parseEditorState(normalized);
-          const json = editorState.toJSON() as any;
-          const hasChildren = Array.isArray(json?.root?.children) && json.root.children.length > 0;
+          const json = editorState.toJSON() as LexicalSerializedEditorState;
+          const hasChildren =
+            Array.isArray(json?.root?.children) &&
+            json.root.children.length > 0;
           // Apply lexical JSON only when it has content
           if (hasChildren) {
             editor.setEditorState(editorState);
@@ -193,7 +213,7 @@ function InitialValuePlugin({ initialValue }: { initialValue?: string }) {
           root.clear();
           const nodes = $convertFromMarkdownString(initialValue, TRANSFORMERS);
           if (Array.isArray(nodes) && nodes.length > 0) {
-            root.append(...(nodes as any));
+            root.append(...(nodes as LexicalNode[]));
           }
           // Fallback: se não houver filhos após a conversão, crie parágrafos a partir do texto simples
           const hasChildren = root.getChildren().length > 0;
@@ -215,9 +235,12 @@ function InitialValuePlugin({ initialValue }: { initialValue?: string }) {
           editor.update(() => {
             const root = $getRoot();
             root.clear();
-            const nodes = $convertFromMarkdownString(initialValue, TRANSFORMERS);
+            const nodes = $convertFromMarkdownString(
+              initialValue,
+              TRANSFORMERS
+            );
             if (Array.isArray(nodes) && nodes.length > 0) {
-              root.append(...(nodes as any));
+              root.append(...(nodes as LexicalNode[]));
             }
             // Fallback: se não houver filhos após a conversão, crie parágrafos a partir do texto simples
             const hasChildren = root.getChildren().length > 0;

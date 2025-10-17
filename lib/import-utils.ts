@@ -1,10 +1,5 @@
 import { NoteData, FolderData, TagData } from "@/types";
-import {
-  createEditor,
-  $getRoot,
-  $createParagraphNode,
-  $createTextNode,
-} from "lexical";
+import { createEditor } from "lexical";
 import { TRANSFORMERS, $convertFromMarkdownString } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
@@ -73,7 +68,9 @@ export function parseJSONFile(
       return obj as NoteData[];
     }
     return obj as NoteData;
-  } catch (e) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("JSON parse error:", message);
     throw new Error("Arquivo JSON inválido");
   }
 }

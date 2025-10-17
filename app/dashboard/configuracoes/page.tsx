@@ -15,8 +15,20 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { parseJSONFile, mergeNotes, mergeFolders, mergeTags } from "@/lib/import-utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  parseJSONFile,
+  mergeNotes,
+  mergeFolders,
+  mergeTags,
+  BackupPayload,
+} from "@/lib/import-utils";
 import { NoteData, FolderData } from "@/types";
 import { Trash2, Tag } from "lucide-react";
 import {
@@ -233,17 +245,21 @@ export default function ConfiguracoesPage() {
     if (!user?.id) return;
     try {
       setIsBackingUp(true);
-      toast.loading("Iniciando backup para o Google Drive...", { id: "drive-backup" });
+      toast.loading("Iniciando backup para o Google Drive...", {
+        id: "drive-backup",
+      });
       const res = await driveBackupNow(user.id);
       if (res.success && res.lastBackupAt) {
         setLastBackupAt(res.lastBackupAt);
-        toast.success("Backup realizado com sucesso no Google Drive!", { id: "drive-backup" });
+        toast.success("Backup realizado com sucesso no Google Drive!", {
+          id: "drive-backup",
+        });
       } else {
         const msg = res.error || "Falha ao realizar backup no Google Drive.";
         toast.error(msg, { id: "drive-backup" });
       }
     } catch (error) {
-      const msg = (error as any)?.message || String(error);
+      const msg = (error as unknown as Error)?.message || String(error);
       toast.error(msg, { id: "drive-backup" });
     } finally {
       setIsBackingUp(false);
@@ -261,7 +277,7 @@ export default function ConfiguracoesPage() {
     if (!file || !user?.id) return;
     try {
       const text = await file.text();
-      const parsed = parseJSONFile(text) as any;
+      const parsed = parseJSONFile(text) as BackupPayload;
       const incomingNotes: NoteData[] = parsed.notes || [];
       const incomingFolders: FolderData[] = parsed.folders || [];
       const incomingTags: TagData[] = parsed.tags || [];
@@ -272,15 +288,23 @@ export default function ConfiguracoesPage() {
         getDocs(collection(db, "users", user.id, "folders")),
         getDocs(collection(db, "users", user.id, "tags")),
       ]);
-      const currentNotes: NoteData[] = notesSnap.docs.map((d) => d.data() as NoteData);
-      const currentFolders: FolderData[] = foldersSnap.docs.map((d) => d.data() as FolderData);
+      const currentNotes: NoteData[] = notesSnap.docs.map(
+        (d) => d.data() as NoteData
+      );
+      const currentFolders: FolderData[] = foldersSnap.docs.map(
+        (d) => d.data() as FolderData
+      );
       const currentTags: TagData[] = tagsSnap.docs.map((d) => {
         const t = d.data() as TagData;
         return {
           id: t.id || d.id,
           name: t.name || d.id,
-          createdAt: t.createdAt ? String(t.createdAt) : new Date().toISOString(),
-          updatedAt: t.updatedAt ? String(t.updatedAt) : new Date().toISOString(),
+          createdAt: t.createdAt
+            ? String(t.createdAt)
+            : new Date().toISOString(),
+          updatedAt: t.updatedAt
+            ? String(t.updatedAt)
+            : new Date().toISOString(),
           color: t.color,
         };
       });
@@ -611,7 +635,9 @@ export default function ConfiguracoesPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium">Agendamento do backup</label>
+              <label className="text-sm font-medium">
+                Agendamento do backup
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <span className="text-sm text-muted-foreground">Período</span>
@@ -632,7 +658,9 @@ export default function ConfiguracoesPage() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Horário preferido</span>
+                  <span className="text-sm text-muted-foreground">
+                    Horário preferido
+                  </span>
                   <Input
                     type="time"
                     value={backupPreferredTime || ""}
@@ -641,7 +669,9 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                O backup automático será tentado próximo ao horário preferido, dentro de uma janela de 30 minutos. Se o app estiver fechado, será realizado na próxima execução.
+                O backup automático será tentado próximo ao horário preferido,
+                dentro de uma janela de 30 minutos. Se o app estiver fechado,
+                será realizado na próxima execução.
               </p>
             </div>
           </CardContent>

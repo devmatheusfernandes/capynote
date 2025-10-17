@@ -48,7 +48,9 @@ export function lexicalToMarkdown(serializedContent: string): string {
     });
 
     return markdown;
-  } catch (e) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Lexical export error:", message);
     // Fallback: tenta extrair texto simples do JSON
     try {
       type LexicalNode = { text?: string; children?: LexicalNode[] };

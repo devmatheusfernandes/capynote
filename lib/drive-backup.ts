@@ -1,11 +1,11 @@
 import { auth, db } from "./firebase";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import {
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-} from "firebase/firestore";
-import { GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup, linkWithPopup } from "firebase/auth";
+  GoogleAuthProvider,
+  signInWithPopup,
+  reauthenticateWithPopup,
+  linkWithPopup,
+} from "firebase/auth";
 import { buildBackupPayload } from "./export-utils";
 import { NoteData, FolderData, TagData } from "@/types";
 
@@ -25,14 +25,16 @@ async function getDriveAccessToken(): Promise<string> {
   const current = auth.currentUser;
   if (current) {
     // Se o usuário não tem Google vinculado, tente vincular para obter o token
-    const hasGoogle = current.providerData?.some((p) => p.providerId === "google.com");
+    const hasGoogle = current.providerData?.some(
+      (p) => p.providerId === "google.com"
+    );
     try {
       result = hasGoogle
         ? await reauthenticateWithPopup(current, provider)
         : await linkWithPopup(current, provider);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Fallback: se vincular falhar por conta já vinculada ou conflito, reautentica
-      const code = err?.code || "";
+      const code = (err as unknown as { code?: string })?.code || "";
       if (
         code === "auth/provider-already-linked" ||
         code === "auth/credential-already-in-use" ||
@@ -131,7 +133,8 @@ async function uploadBackupFile(
   filename: string,
   content: string
 ): Promise<void> {
-  const boundary = "capynotes_backup_boundary_" + Math.random().toString(36).slice(2);
+  const boundary =
+    "capynotes_backup_boundary_" + Math.random().toString(36).slice(2);
   const metadata = {
     name: filename,
     parents: [folderId],
@@ -194,13 +197,12 @@ export async function driveBackupNow(userId: string): Promise<BackupResult> {
 
     const lastBackupAt = new Date().toISOString();
     const settingsRef = doc(db, "users", userId, "meta", "settings");
-    await setDoc(
-      settingsRef,
-      { lastBackupAt },
-      { merge: true }
-    );
+    await setDoc(settingsRef, { lastBackupAt }, { merge: true });
     return { success: true, lastBackupAt };
-  } catch (error: any) {
-    return { success: false, error: error?.message || String(error) };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: (error as Error)?.message || String(error),
+    };
   }
 }
