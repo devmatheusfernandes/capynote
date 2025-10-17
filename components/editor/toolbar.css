@@ -6,153 +6,122 @@
   left: 0;
   right: 0;
   width: 100%;
-  background-color: #edeef0;
-  border-top: 1px solid #e5e7eb;
+  border-top-right-radius: 1rem;
+  border-top-left-radius: 1rem;
   z-index: 10;
   padding: 0.5rem 1rem;
+  background-color: rgb(228, 228, 228); /* Usa a cor de fundo do tema */
+  
+  /* Implementação de expansão de altura (sem 'subir') */
+  max-height: 3rem; 
+  overflow: hidden; 
+  transition: max-height 0.3s ease-in-out; 
+}
+
+/* Estado expandido - Permite que a altura se ajuste ao conteúdo, mantendo a base. */
+.toolbar-container.expanded {
+  max-height: 200px; /* Valor grande o suficiente para acomodar botões extras */
 }
 
 /* Dark mode support */
 .dark .toolbar-container {
-  background-color: oklch(0.256 0.006 56.043);
-  border-top-color: oklch(1 0 0 / 10%);
+  background-color: #12171a; 
+  border-top-color: var(--border);
 }
 
 /* Toolbar Content - Responsive container */
 .toolbar-content {
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* Centraliza os botões */
+  justify-content: center; 
   gap: 0.25rem;
   max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  /* Força o wrap para mostrar os botões na expansão */
+  flex-wrap: wrap; 
+  position: relative;
+  /* Adiciona padding lateral interno para centralizar corretamente */
+  padding: 0 0.5rem; 
 }
 
-.toolbar-content::-webkit-scrollbar {
-  display: none;
-}
-
-/* Toolbar Groups */
-.toolbar-group {
+/* Botão de expandir - sempre no canto */
+.toolbar-expand-button {
   display: flex;
-  align-items: center;
-  gap: 0.125rem;
-  flex-shrink: 0;
-}
-
-/* Toolbar Separator */
-.toolbar-separator {
-  width: 1px;
-  height: 1.25rem;
-  background-color: #d1d5db;
-  flex-shrink: 0;
-  margin: 0 0.375rem;
-}
-
-.dark .toolbar-separator {
-  background-color: #4b5563;
+  /* Posição absoluta para flutuar no canto e não quebrar a centralização */
+  position: absolute;
+  right: 0.5rem; 
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1; 
 }
 
 /* Toolbar Buttons - Following design rules */
 .toolbar-button {
   min-width: 2rem;
   height: 2rem;
-  padding: 0.375rem;
-  border: none;
-  background-color: transparent;
-  color: #6b7280;
+  padding: 0.375rem;  color: var(--foreground); /* Cor de texto padrão */
   transition: all 0.15s ease-in-out;
   flex-shrink: 0;
-  border-radius: 0.375rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: var(--primary);
 }
 
 .toolbar-button:hover {
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: var(--accent); /* Usa cor de destaque (hover) do tema */
+  color: var(--accent-foreground);
 }
 
 .toolbar-button:focus {
   outline: none;
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: var(--accent);
+  color: var(--accent-foreground);
 }
 
-/* Active state for formatting buttons */
+/* ESTADO ATIVO: Usa a cor Primary (default) do tema */
 .toolbar-button[data-state="on"],
 .toolbar-button.active {
-  background-color: #111827;
-  color: white;
+  /* No Shadcn, variant="default" (primary) usa essas variáveis */
+  background-color: var(--primary) !important; 
+  color: var(--primary-foreground) !important; 
+  border-color: var(--primary) !important;
 }
 
 .toolbar-button[data-state="on"]:hover,
 .toolbar-button.active:hover {
-  background-color: #1f2937;
+  /* Cor um pouco mais escura/clara para hover no estado primário */
+  background-color: var(--primary) !important; 
 }
 
-/* Secondary buttons (Obsidian features) */
+/* Secondary buttons (Obsidian features - #tag, [[link]]) */
 .toolbar-button-secondary {
-  color: #059669;
+  color: var(--secondary-foreground); /* Cor do ícone */
+  border-color: var(--secondary); /* Borda secundária */
 }
 
 .toolbar-button-secondary:hover {
-  background-color: #d1fae5;
-  color: #047857;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
 }
 
-.toolbar-button-secondary:focus {
-  background-color: #d1fae5;
-  color: #047857;
-}
-
-/* Dark mode button styles */
+/* Dark mode button styles - Garantido pelo uso de variáveis */
 .dark .toolbar-button {
-  background-color: transparent;
-  color: #9ca3af;
-}
-
-.dark .toolbar-button:hover {
-  background-color: #1f2937;
-  color: #f3f4f6;
-}
-
-.dark .toolbar-button[data-state="on"],
-.dark .toolbar-button.active {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
-.dark .toolbar-button[data-state="on"]:hover,
-.dark .toolbar-button.active:hover {
-  background-color: #e5e7eb;
-}
-
-.dark .toolbar-button-secondary {
-  color: #10b981;
-}
-
-.dark .toolbar-button-secondary:hover {
-  background-color: #064e3b;
-  color: #34d399;
+  border-color: var(--border);
+  color: var(--primary);
 }
 
 /* Responsive Design */
 @media (max-width: 640px) {
   .toolbar-container {
     padding: 0.5rem 0.75rem;
+    max-height: 2.75rem; 
   }
   
   .toolbar-content {
     gap: 0.125rem;
-  }
-  
-  .toolbar-group {
-    gap: 0.0625rem;
+    padding: 0 0.5rem; 
   }
   
   .toolbar-button {
@@ -160,11 +129,16 @@
     height: 1.875rem;
     padding: 0.3125rem;
   }
+
+  .toolbar-expand-button {
+    right: 0.25rem; 
+  }
 }
 
 @media (max-width: 480px) {
   .toolbar-container {
     padding: 0.6rem;
+    max-height: 2.6rem; 
   }
   
   .toolbar-button {
@@ -172,17 +146,22 @@
     height: 1.75rem;
     padding: 0.25rem;
   }
-  
-  .toolbar-separator {
-    height: 1rem;
-    margin: 0 0.25rem;
+
+  .toolbar-expand-button {
+    right: 0.1rem; 
   }
 }
 
-/* Extra small screens - hide some less essential buttons */
+/* Extra small screens - comportamento ainda mais compacto */
 @media (max-width: 360px) {
-  .toolbar-group:nth-child(3) {
-    display: none; /* Hide heading buttons on very small screens */
+  .toolbar-container {
+    padding: 0.5rem;
+    max-height: 2.5rem; 
+  }
+
+  .toolbar-button {
+    min-width: 1.5rem;
+    height: 1.5rem;
   }
 }
 
@@ -190,6 +169,7 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .toolbar-container {
     padding: 0.25rem 0.5rem;
+    max-height: 2rem; 
   }
   
   .toolbar-button {
@@ -204,14 +184,6 @@
   .toolbar-button {
     border: 1px solid currentColor;
   }
-  
-  .toolbar-separator {
-    background-color: #000;
-  }
-  
-  .dark .toolbar-separator {
-    background-color: #fff;
-  }
 }
 
 /* Reduced motion support */
@@ -219,17 +191,25 @@
   .toolbar-button {
     transition: none;
   }
+
+  .toolbar-container {
+    transition: none;
+  }
+
+  .toolbar-button svg {
+    transition: none;
+  }
 }
 
 /* Focus visible for accessibility */
 .toolbar-button:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--ring); /* Usa a cor de anel do tema */
   outline-offset: 2px;
 }
 
 /* Ensure toolbar doesn't interfere with content */
 .toolbar-spacer {
-  height: 3rem;
+  height: 3rem; 
 }
 
 @media (max-width: 640px) {
@@ -240,6 +220,6 @@
 
 @media (max-width: 480px) {
   .toolbar-spacer {
-    height: 2.5rem;
+    height: 2.6rem;
   }
 }

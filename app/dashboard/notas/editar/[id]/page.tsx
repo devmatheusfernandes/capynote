@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Save, Trash2, MoreVertical, BookOpen, ArrowLeft } from "lucide-react";
+import {
+  Save,
+  Trash2,
+  MoreVertical,
+  BookOpen,
+  ArrowLeft,
+  SaveOff,
+  SaveIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -318,10 +326,8 @@ export default function EditNotePage() {
               />
               <Badge
                 variant="outline"
-                className={`text-xs ${
-                  pendingWrites
-                    ? "border-amber-300 text-amber-700"
-                    : "border-emerald-300 text-emerald-700"
+                className={`text-md ${
+                  pendingWrites ? " text-amber-600" : " text-emerald-700"
                 }`}
                 title={
                   pendingWrites
@@ -329,7 +335,11 @@ export default function EditNotePage() {
                     : "Sincronizado com o banco"
                 }
               >
-                {pendingWrites ? "Offline" : "Sincronizado"}
+                {pendingWrites ? (
+                  <SaveOff className="h-4 w-4" />
+                ) : (
+                  <SaveIcon className="h-4 w-4" />
+                )}
               </Badge>
               {openReadMode ? (
                 <Button

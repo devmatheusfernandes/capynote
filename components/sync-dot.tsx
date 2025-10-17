@@ -9,7 +9,11 @@ type SyncDotProps = {
   size?: number; // size in pixels
 };
 
-export default function SyncDot({ pending, className, size = 8 }: SyncDotProps) {
+export default function SyncDot({
+  pending,
+  className,
+  size = 6,
+}: SyncDotProps) {
   const baseClasses = "inline-block rounded-full flex-shrink-0";
   const colorClass = pending ? "bg-amber-500" : "bg-emerald-500";
   const style = {
@@ -22,7 +26,11 @@ export default function SyncDot({ pending, className, size = 8 }: SyncDotProps) 
       className={cn(baseClasses, colorClass, className)}
       style={style}
       aria-label={pending ? "Alterações pendentes (offline)" : "Sincronizado"}
-      title={pending ? "Somente offline, aguardando upload" : "Sincronizado com o banco"}
+      title={
+        pending
+          ? "Somente offline, aguardando upload"
+          : "Sincronizado com o banco"
+      }
     />
   );
 }
