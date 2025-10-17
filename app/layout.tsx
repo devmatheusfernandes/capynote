@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import SWRegister from "@/components/sw-register";
 import { AuthProvider } from "@/contexts/auth-context";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>{children}</AuthProvider>
+          <Toaster richColors position="top-right" />
           <SWRegister />
         </ThemeProvider>
       </body>

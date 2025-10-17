@@ -57,12 +57,6 @@ export function markdownToLexical(markdown: string): string {
   const editorState = editor.getEditorState();
   const serialized = JSON.stringify(editorState.toJSON());
 
-  console.log(
-    "[markdownToLexical] Markdown input:",
-    markdown.substring(0, 100)
-  );
-  console.log("[markdownToLexical] Serialized output:", serialized);
-
   return serialized;
 }
 

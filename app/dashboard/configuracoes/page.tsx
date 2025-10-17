@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Tag } from "lucide-react";
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
+import { driveBackupNow } from "@/lib/drive-backup";
 import {
   collection,
   onSnapshot,
@@ -43,6 +45,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { TagData } from "@/types";
+import { toast } from "sonner";
 
 export default function ConfiguracoesPage() {
   const { user } = useAuth();
@@ -50,6 +53,11 @@ export default function ConfiguracoesPage() {
   const [defaultTaskTime, setDefaultTaskTime] = useState<string>("09:00");
   const [notificationsEnabled, setNotificationsEnabled] =
     useState<boolean>(false);
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState<boolean>(false);
+  const [lastBackupAt, setLastBackupAt] = useState<string | undefined>();
+  const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
+  const [backupIntervalHours, setBackupIntervalHours] = useState<number>(24);
+  const [backupPreferredTime, setBackupPreferredTime] = useState<string>("");
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
@@ -88,11 +96,26 @@ export default function ConfiguracoesPage() {
     const settingsRef = doc(db, "users", userId, "meta", "settings");
     const unsub = onSnapshot(settingsRef, (snap) => {
       const data = snap.data() as
-        | { defaultTaskTime?: string; notificationsEnabled?: boolean }
+        | {
+            defaultTaskTime?: string;
+            notificationsEnabled?: boolean;
+            autoBackupEnabled?: boolean;
+            lastBackupAt?: string;
+            backupIntervalHours?: number;
+            backupPreferredTime?: string;
+          }
         | undefined;
       if (data?.defaultTaskTime) setDefaultTaskTime(data.defaultTaskTime);
       if (typeof data?.notificationsEnabled === "boolean")
         setNotificationsEnabled(data.notificationsEnabled);
+      if (typeof data?.autoBackupEnabled === "boolean")
+        setAutoBackupEnabled(data.autoBackupEnabled);
+      if (typeof data?.lastBackupAt === "string")
+        setLastBackupAt(data.lastBackupAt);
+      if (typeof data?.backupIntervalHours === "number")
+        setBackupIntervalHours(data.backupIntervalHours);
+      if (typeof data?.backupPreferredTime === "string")
+        setBackupPreferredTime(data.backupPreferredTime);
     });
     setPermission(
       typeof Notification !== "undefined" ? Notification.permission : "default"
@@ -186,6 +209,68 @@ export default function ConfiguracoesPage() {
       const message = error;
       console.log(message);
     }
+  };
+
+  const toggleAutoBackup = async () => {
+    if (!user?.id) return;
+    const nextEnabled = !autoBackupEnabled;
+    setAutoBackupEnabled(nextEnabled);
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    await setDoc(
+      settingsRef,
+      {
+        autoBackupEnabled: nextEnabled,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  };
+
+  const handleBackupNow = async () => {
+    if (!user?.id) return;
+    try {
+      setIsBackingUp(true);
+      toast.loading("Iniciando backup para o Google Drive...", { id: "drive-backup" });
+      const res = await driveBackupNow(user.id);
+      if (res.success && res.lastBackupAt) {
+        setLastBackupAt(res.lastBackupAt);
+        toast.success("Backup realizado com sucesso no Google Drive!", { id: "drive-backup" });
+      } else {
+        const msg = res.error || "Falha ao realizar backup no Google Drive.";
+        toast.error(msg, { id: "drive-backup" });
+      }
+    } catch (error) {
+      const msg = (error as any)?.message || String(error);
+      toast.error(msg, { id: "drive-backup" });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const changeBackupInterval = async (value: string) => {
+    if (!user?.id) return;
+    const hours = Number(value);
+    if (Number.isNaN(hours) || hours <= 0) return;
+    setBackupIntervalHours(hours);
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    await setDoc(
+      settingsRef,
+      { backupIntervalHours: hours, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    toast.success("Período de backup atualizado");
+  };
+
+  const saveBackupPreferredTime = async (value: string) => {
+    if (!user?.id) return;
+    setBackupPreferredTime(value);
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    await setDoc(
+      settingsRef,
+      { backupPreferredTime: value, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    toast.success("Horário preferido de backup atualizado");
   };
 
   // Delete tag
@@ -396,6 +481,81 @@ export default function ConfiguracoesPage() {
                   className="w-full sm:max-w-[160px]"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup no Google Drive</CardTitle>
+            <CardDescription>
+              Faça backup manual ou habilite backup automático diário.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status do backup</label>
+              <div className="flex items-center gap-2">
+                {lastBackupAt ? (
+                  <Badge variant="secondary">
+                    Último backup: {new Date(lastBackupAt).toLocaleString()}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Nunca realizado</Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Button
+                className="w-full sm:w-auto"
+                onClick={handleBackupNow}
+                disabled={isBackingUp}
+              >
+                {isBackingUp ? "Realizando backup..." : "Fazer backup agora"}
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                variant={autoBackupEnabled ? "default" : "outline"}
+                onClick={toggleAutoBackup}
+              >
+                {autoBackupEnabled ? "Desativar" : "Ativar"} backup automático
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Agendamento do backup</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Período</span>
+                  <Select
+                    value={String(backupIntervalHours)}
+                    onValueChange={changeBackupInterval}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">A cada 12 horas</SelectItem>
+                      <SelectItem value="24">A cada 24 horas</SelectItem>
+                      <SelectItem value="48">A cada 48 horas</SelectItem>
+                      <SelectItem value="168">Semanal (168 horas)</SelectItem>
+                      <SelectItem value="336">Quinzenal (336 horas)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Horário preferido</span>
+                  <Input
+                    type="time"
+                    value={backupPreferredTime || ""}
+                    onChange={(e) => saveBackupPreferredTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O backup automático será tentado próximo ao horário preferido, dentro de uma janela de 30 minutos. Se o app estiver fechado, será realizado na próxima execução.
+              </p>
             </div>
           </CardContent>
         </Card>

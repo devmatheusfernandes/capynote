@@ -38,4 +38,8 @@ googleProvider.setCustomParameters({
   prompt: "select_account",
 });
 
+// Request Google Drive file scope for backups
+// This enables creating and managing files the app creates in the user's Drive.
+googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+
 export default app;

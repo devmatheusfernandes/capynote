@@ -2,6 +2,7 @@ import RouteAwareFloatingCreateButton from "@/components/route-aware-floating-cr
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import MountNotifications from "@/components/mount-notifications";
 import { ProtectedRoute } from "@/components/protected-route";
+import AutoBackup from "@/components/auto-backup";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
       <DashboardSidebar>
         <div className="bg-background h-full">{children}</div>
         <MountNotifications />
+        <AutoBackup />
         <RouteAwareFloatingCreateButton />
       </DashboardSidebar>
     </ProtectedRoute>
