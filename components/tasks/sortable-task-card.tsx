@@ -20,6 +20,8 @@ interface SortableTaskCardProps {
   calendarDayIndex?: number;
   calendarMoveLeftEnabled?: boolean;
   calendarMoveRightEnabled?: boolean;
+  // Mobile status arrows
+  showMobileStatusArrows?: boolean;
 }
 
 export const SortableTaskCard: React.FC<SortableTaskCardProps> = (props) => {

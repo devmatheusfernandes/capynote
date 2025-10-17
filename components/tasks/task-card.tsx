@@ -9,7 +9,9 @@ import {
   Clock, 
   AlertCircle, 
   Repeat,
-  CheckSquare 
+  CheckSquare,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { TaskData } from "@/types/tasks";
 import { 
@@ -20,6 +22,7 @@ import {
   truncateWords 
 } from "@/lib/task-utils";
 import SyncDot from "@/components/sync-dot";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskCardProps {
   task: TaskData;
@@ -36,6 +39,8 @@ interface TaskCardProps {
   calendarDayIndex?: number;
   calendarMoveLeftEnabled?: boolean;
   calendarMoveRightEnabled?: boolean;
+  // Mobile status arrows
+  showMobileStatusArrows?: boolean;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -45,10 +50,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onView,
   onDelete,
+  showMobileStatusArrows = false,
 }) => {
+  const isMobile = useIsMobile();
+  
   const handleStatusToggle = () => {
     const newStatus = task.status === "concluida" ? "pendente" : "concluida";
     onToggleStatus(task.id, newStatus);
+  };
+
+  const handleStatusUp = () => {
+    const statusOrder: TaskData["status"][] = ["pendente", "em-progresso", "concluida"];
+    const currentIndex = statusOrder.indexOf(task.status);
+    if (currentIndex > 0) {
+      onToggleStatus(task.id, statusOrder[currentIndex - 1]);
+    }
+  };
+
+  const handleStatusDown = () => {
+    const statusOrder: TaskData["status"][] = ["pendente", "em-progresso", "concluida"];
+    const currentIndex = statusOrder.indexOf(task.status);
+    if (currentIndex < statusOrder.length - 1) {
+      onToggleStatus(task.id, statusOrder[currentIndex + 1]);
+    }
   };
 
   const overdue = isOverdue(task.dueDate, task.dueTime);
@@ -144,30 +168,61 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               )}
             </div>
           </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task);
-              }}
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(task.id);
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
+          {/* Mobile Status Arrows - Always visible on mobile when enabled */}
+          {isMobile && showMobileStatusArrows ? (
+            <div className="flex flex-col gap-1 opacity-100">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 bg-blue-50 hover:bg-blue-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusUp();
+                }}
+                disabled={task.status === "pendente"}
+              >
+                <ChevronUp className="h-3 w-3 text-blue-600" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 bg-blue-50 hover:bg-blue-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusDown();
+                }}
+                disabled={task.status === "concluida"}
+              >
+                <ChevronDown className="h-3 w-3 text-blue-600" />
+              </Button>
+            </div>
+          ) : (
+            /* Desktop Edit/Delete buttons - Only visible on hover */
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task);
+                }}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(task.id);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

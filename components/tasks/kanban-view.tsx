@@ -88,6 +88,7 @@ export function KanbanView({
                     onStatusChange={onTaskStatusChange}
                     onToggleComplete={onTaskToggleComplete}
                     onSubtaskToggle={onSubtaskToggle}
+                    showMobileStatusArrows={true}
                   />
                 ))}
               </SortableContext>
