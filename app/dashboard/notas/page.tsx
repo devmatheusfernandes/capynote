@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -17,6 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +52,20 @@ import {
   deleteDoc,
   deleteField,
 } from "firebase/firestore";
+import {
+  downloadFile,
+  exportNotesAsJSON,
+  exportNotesAsMarkdown,
+  buildBackupPayload,
+} from "@/lib/export-utils";
+import {
+  parseJSONFile,
+  markdownToLexical,
+  deriveTitleFromMarkdown,
+  mergeNotes,
+  mergeFolders,
+  mergeTags,
+} from "@/lib/import-utils";
 
 export default function NotasPage() {
   const router = useRouter();
@@ -67,6 +87,8 @@ export default function NotasPage() {
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
   // Subscribe to Firestore notes and folders for the authenticated user
   useEffect(() => {
@@ -169,6 +191,11 @@ export default function NotasPage() {
     }
   }, [currentFolderId, folders, getFolderPath]);
 
+  const tagsById = useMemo(
+    () => Object.fromEntries(availableTags.map((t) => [t.id, t.name])),
+    [availableTags]
+  );
+
   // Filter notes and folders based on current folder, search term and selected tags
   useEffect(() => {
     // Filter notes by current folder
@@ -247,6 +274,184 @@ export default function NotasPage() {
     selectedTags,
     getTagNameById,
   ]);
+
+  // Export handlers (filtered scope = por pasta ou por tag)
+  const handleExportJSONFiltered = useCallback(() => {
+    const json = exportNotesAsJSON(filteredNotes);
+    const filename = currentFolderId ? `notas_${currentFolderId}.json` : "notas_root.json";
+    downloadFile(filename, json, "application/json");
+  }, [filteredNotes, currentFolderId]);
+
+  const handleExportMarkdownFiltered = useCallback(() => {
+    const md = exportNotesAsMarkdown(filteredNotes, folders, tagsById);
+    const filename = currentFolderId ? `notas_${currentFolderId}.md` : "notas_root.md";
+    downloadFile(filename, md, "text/markdown");
+  }, [filteredNotes, folders, tagsById, currentFolderId]);
+
+  const handleBackupAll = useCallback(() => {
+    const payload = buildBackupPayload(notes, folders, availableTags);
+    const json = JSON.stringify(payload, null, 2);
+    const filename = `capynotes_backup_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    downloadFile(filename, json, "application/json");
+    try {
+      const history = JSON.parse(localStorage.getItem("backupHistory") || "[]");
+      history.push({ filename, at: new Date().toISOString(), notes: notes.length, folders: folders.length, tags: availableTags.length });
+      localStorage.setItem("backupHistory", JSON.stringify(history));
+    } catch {}
+  }, [notes, folders, availableTags]);
+
+  // Import para pasta atual/raiz (JSON ou Markdown)
+  const triggerImportFile = useCallback(() => {
+    importFileInputRef.current?.click();
+  }, []);
+
+  const onImportFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !user?.id) return;
+      const text = await file.text();
+      // Debug: log file metadata and raw content
+      console.log("[Import] Selected file:", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+      console.log("[Import] File content (raw):\n", text);
+      const isMarkdown =
+        file.name.toLowerCase().endsWith(".md") || file.type === "text/markdown";
+      console.log("[Import] Detected markdown?", isMarkdown);
+      if (isMarkdown) {
+        // Import single markdown as one note
+        const content = markdownToLexical(text);
+        console.log("[Import] Converted Lexical JSON from Markdown:", content);
+        const title = deriveTitleFromMarkdown(text, file.name.replace(/\.md$/, ""));
+        console.log("[Import] Derived title:", title);
+        const noteRef = doc(collection(db, "users", user.id, "notes"));
+        const note: NoteData = {
+          id: noteRef.id,
+          title: title || "Nota importada",
+          content,
+          folderId: currentFolderId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tags: [],
+          tagIds: [],
+        };
+        const payload = Object.fromEntries(
+          Object.entries(note).filter(([, v]) => v !== undefined)
+        );
+        console.log("[Import] Saving note payload:", payload);
+        await setDoc(noteRef, payload);
+        console.log("[Import] Note saved with id:", noteRef.id);
+      } else {
+        // JSON: pode ser nota única, array de notas
+        const parsed = parseJSONFile(text);
+        console.log("[Import] Parsed JSON:", parsed);
+        if (Array.isArray(parsed)) {
+          await Promise.all(
+            parsed.map(async (n) => {
+              const noteRef = doc(collection(db, "users", user.id, "notes"));
+              const note: NoteData = {
+                id: noteRef.id,
+                title: n.title || "Nota importada",
+                content: n.content || "",
+                folderId: currentFolderId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                tags: n.tags || [],
+                tagIds: n.tagIds || [],
+              };
+              const payload = Object.fromEntries(
+                Object.entries(note).filter(([, v]) => v !== undefined)
+              );
+              console.log("[Import] Saving array note payload:", payload);
+              await setDoc(noteRef, payload);
+              console.log("[Import] Note saved with id:", noteRef.id);
+            })
+          );
+        } else if ((parsed as any)?.notes || (parsed as any)?.folders || (parsed as any)?.tags) {
+          // Se for payload de backup, sugerimos usar a ação de Restore
+          alert("Este arquivo parece um backup. Use 'Restaurar backup' para mesclar os dados.");
+        } else {
+          const n = parsed as NoteData;
+          const noteRef = doc(collection(db, "users", user.id, "notes"));
+          const note: NoteData = {
+            id: noteRef.id,
+            title: n.title || "Nota importada",
+            content: n.content || "",
+            folderId: currentFolderId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            tags: n.tags || [],
+            tagIds: n.tagIds || [],
+          };
+          const payload = Object.fromEntries(
+            Object.entries(note).filter(([, v]) => v !== undefined)
+          );
+          console.log("[Import] Saving single note payload:", payload);
+          await setDoc(noteRef, payload);
+          console.log("[Import] Note saved with id:", noteRef.id);
+        }
+      }
+      // limpa input
+      e.target.value = "";
+      console.log("[Import] Import finished.");
+    },
+    [user?.id, currentFolderId, db]
+  );
+
+  // Restore com merge a partir de backup JSON
+  const triggerRestoreFile = useCallback(() => {
+    restoreFileInputRef.current?.click();
+  }, []);
+
+  const onRestoreFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !user?.id) return;
+      const text = await file.text();
+      try {
+        const parsed = parseJSONFile(text) as any;
+        const incomingNotes: NoteData[] = parsed.notes || [];
+        const incomingFolders: FolderData[] = parsed.folders || [];
+        const incomingTags: TagData[] = parsed.tags || [];
+
+        const mergedNotes = mergeNotes(notes, incomingNotes);
+        const mergedFolders = mergeFolders(folders, incomingFolders);
+        const mergedTags = mergeTags(availableTags, incomingTags);
+
+        await Promise.all(
+          mergedFolders.map((f) => {
+            const payload = Object.fromEntries(
+              Object.entries(f).filter(([, v]) => v !== undefined)
+            );
+            return setDoc(doc(db, "users", user.id, "folders", f.id), payload, { merge: true });
+          })
+        );
+        await Promise.all(
+          mergedTags.map((t) => {
+            const payload = Object.fromEntries(
+              Object.entries(t).filter(([, v]) => v !== undefined)
+            );
+            return setDoc(doc(db, "users", user.id, "tags", t.id), payload, { merge: true });
+          })
+        );
+        await Promise.all(
+          mergedNotes.map((n) => {
+            const payload = Object.fromEntries(
+              Object.entries(n).filter(([, v]) => v !== undefined)
+            );
+            return setDoc(doc(db, "users", user.id, "notes", n.id), payload, { merge: true });
+          })
+        );
+      } catch (err) {
+        console.error(err);
+        alert("Falha ao restaurar backup. Verifique o arquivo.");
+      }
+      e.target.value = "";
+    },
+    [user?.id, notes, folders, availableTags, db]
+  );
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -426,6 +631,53 @@ export default function NotasPage() {
               <FilePlus2 className="h-4 w-4" />
               Nota
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportJSONFiltered}>
+                  Exportar notas (JSON)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportMarkdownFiltered}>
+                  Exportar notas (Markdown)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleBackupAll}>
+                  Backup completo (JSON)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Importar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={triggerImportFile}>
+                  Importar nota(s) (JSON/Markdown) nesta pasta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={triggerRestoreFile}>
+                  Restaurar backup (merge)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".json,.md"
+              className="hidden"
+              onChange={onImportFileChange}
+            />
+            <input
+              ref={restoreFileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={onRestoreFileChange}
+            />
           </div>
         }
       />
@@ -543,6 +795,37 @@ export default function NotasPage() {
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="sr-only">Mais ações</span>
+                          ⋮
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const json = exportNotesAsJSON([note]);
+                            downloadFile(`${note.title || note.id}.json`, json, "application/json");
+                          }}
+                        >
+                          Exportar (JSON)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const md = exportNotesAsMarkdown([note], folders, tagsById);
+                            downloadFile(`${note.title || note.id}.md`, md, "text/markdown");
+                          }}
+                        >
+                          Exportar (Markdown)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-3">

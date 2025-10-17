@@ -17,12 +17,13 @@ import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { TRANSFORMERS } from "@lexical/markdown";
+import { EditorState, ParagraphNode, TextNode } from "lexical";
 import {
   ObsidianPlugin,
   WikiLinkNode,
   TagNode,
 } from "./plugins/obsidian-plugin";
-import { EditorState } from "lexical";
+// EditorState import moved above to include TextNode
 
 const theme = {
   // Theme styling
@@ -138,6 +139,8 @@ export default function NoteEditor({
       CodeHighlightNode,
       AutoLinkNode,
       LinkNode,
+      ParagraphNode,
+      TextNode,
       WikiLinkNode,
       TagNode,
     ],

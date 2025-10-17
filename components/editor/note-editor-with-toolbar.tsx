@@ -16,7 +16,8 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
-import { TRANSFORMERS } from "@lexical/markdown";
+import { TRANSFORMERS, $convertFromMarkdownString } from "@lexical/markdown";
+import { ParagraphNode, TextNode, $getRoot, $createParagraphNode, $createTextNode } from "lexical";
 import {
   ObsidianPlugin,
   WikiLinkNode,
@@ -168,11 +169,72 @@ function InitialValuePlugin({ initialValue }: { initialValue?: string }) {
     ) {
       try {
         const normalized = normalizeSerializedState(initialValue);
-        const editorState = editor.parseEditorState(normalized);
-        editor.setEditorState(editorState);
+        const parsed = JSON.parse(normalized);
+        const isLexicalJSON = parsed && parsed.root && typeof parsed.root === "object";
+
+        if (isLexicalJSON) {
+          const editorState = editor.parseEditorState(normalized);
+          const json = editorState.toJSON() as any;
+          const hasChildren = Array.isArray(json?.root?.children) && json.root.children.length > 0;
+          // Apply lexical JSON only when it has content
+          if (hasChildren) {
+            editor.setEditorState(editorState);
+            hasAppliedInitialValue.current = true;
+          } else {
+            // Empty lexical state: do nothing (keep editor empty)
+            hasAppliedInitialValue.current = true;
+          }
+          return;
+        }
+
+        // Only non-JSON values are treated as Markdown
+        editor.update(() => {
+          const root = $getRoot();
+          root.clear();
+          const nodes = $convertFromMarkdownString(initialValue, TRANSFORMERS);
+          if (Array.isArray(nodes) && nodes.length > 0) {
+            root.append(...(nodes as any));
+          }
+          // Fallback: se não houver filhos após a conversão, crie parágrafos a partir do texto simples
+          const hasChildren = root.getChildren().length > 0;
+          const trimmed = initialValue.trim();
+          if (!hasChildren && trimmed.length > 0) {
+            const blocks = trimmed.split(/\r?\n\s*\r?\n/);
+            for (const block of blocks) {
+              const p = $createParagraphNode();
+              p.append($createTextNode(block));
+              root.append(p);
+            }
+          }
+        });
         hasAppliedInitialValue.current = true;
       } catch (error) {
         console.warn("Failed to parse initial value:", error);
+        // If parsing failed, assume it's Markdown and convert
+        try {
+          editor.update(() => {
+            const root = $getRoot();
+            root.clear();
+            const nodes = $convertFromMarkdownString(initialValue, TRANSFORMERS);
+            if (Array.isArray(nodes) && nodes.length > 0) {
+              root.append(...(nodes as any));
+            }
+            // Fallback: se não houver filhos após a conversão, crie parágrafos a partir do texto simples
+            const hasChildren = root.getChildren().length > 0;
+            const trimmed = initialValue.trim();
+            if (!hasChildren && trimmed.length > 0) {
+              const blocks = trimmed.split(/\r?\n\s*\r?\n/);
+              for (const block of blocks) {
+                const p = $createParagraphNode();
+                p.append($createTextNode(block));
+                root.append(p);
+              }
+            }
+          });
+          hasAppliedInitialValue.current = true;
+        } catch (e) {
+          console.warn("Failed to convert markdown initial value:", e);
+        }
       }
     }
   }, [editor, initialValue]);
@@ -204,6 +266,8 @@ export default function NoteEditorWithToolbar({
       CodeHighlightNode,
       AutoLinkNode,
       LinkNode,
+      ParagraphNode,
+      TextNode,
       WikiLinkNode,
       TagNode,
     ],
