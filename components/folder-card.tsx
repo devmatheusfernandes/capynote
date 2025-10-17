@@ -30,6 +30,7 @@ interface FolderCardProps {
   onRename: (folderId: string, newName: string) => void;
   onDelete: (folderId: string) => void;
   syncPending?: boolean;
+  onDropNote?: (folderId: string, noteId: string) => void;
 }
 
 export function FolderCard({
@@ -39,10 +40,12 @@ export function FolderCard({
   onRename,
   onDelete,
   syncPending,
+  onDropNote,
 }: FolderCardProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(folder.name);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleRename = () => {
     if (newName.trim() && newName.trim() !== folder.name) {
@@ -68,7 +71,32 @@ export function FolderCard({
 
   return (
     <>
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer">
+      <Card
+        className={`group hover:shadow-md transition-shadow cursor-pointer ${
+          isDragOver ? "ring-2 ring-primary/50" : ""
+        }`}
+        onDragOver={(e) => {
+          // Allow dropping notes
+          if (onDropNote) {
+            e.preventDefault();
+            setIsDragOver(true);
+          }
+        }}
+        onDragEnter={(e) => {
+          if (onDropNote) {
+            e.preventDefault();
+            setIsDragOver(true);
+          }
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          setIsDragOver(false);
+          const noteId = e.dataTransfer.getData("text/plain");
+          if (onDropNote && noteId) {
+            onDropNote(folder.id, noteId);
+          }
+        }}
+      >
         <CardContent className="">
           <div className="flex items-center justify-between">
             <div
@@ -129,8 +157,9 @@ export function FolderCard({
                   Renomear
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={() => folder.id !== "archive" && setShowDeleteDialog(true)}
                   className="text-destructive"
+                  disabled={folder.id === "archive"}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Excluir

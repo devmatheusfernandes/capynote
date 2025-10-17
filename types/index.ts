@@ -15,6 +15,8 @@ export interface NoteData {
   // Legado: nomes de tags diretamente na nota (mantido para compatibilidade)
   tags?: string[];
   folderId?: string; // ID da pasta onde a nota está localizada
+  archived?: boolean; // Nota arquivada (opcional)
+  pinned?: boolean; // Nota fixada (opcional)
   createdAt: string;
   updatedAt: string;
 }

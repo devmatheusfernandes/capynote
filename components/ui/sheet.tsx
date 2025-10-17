@@ -133,6 +133,13 @@ type ExportImportSheetProps = {
   onBackupAll: () => void;
   onImportNotes: () => void;
   onRestoreBackup: () => void;
+  // New view toggles
+  onShowPinnedNotes?: () => void;
+  onShowArchivedNotes?: () => void;
+  onShowAllNotes?: () => void;
+  activePinned?: boolean;
+  activeArchived?: boolean;
+  activeAll?: boolean;
   trigger?: React.ReactNode;
 };
 
@@ -141,6 +148,12 @@ function ExportImportSheet({
   onBackupAll,
   onImportNotes,
   onRestoreBackup,
+  onShowPinnedNotes,
+  onShowArchivedNotes,
+  onShowAllNotes,
+  activePinned,
+  activeArchived,
+  activeAll,
   trigger,
 }: ExportImportSheetProps) {
   return (
@@ -179,6 +192,32 @@ function ExportImportSheet({
               </Button>
               <Button variant="outline" onClick={onRestoreBackup}>
                 Restaurar backup
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Visualizar</div>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant={activeArchived ? "secondary" : "outline"}
+                onClick={onShowArchivedNotes}
+                disabled={!onShowArchivedNotes}
+              >
+                Arquivadas
+              </Button>
+              <Button
+                variant={activePinned ? "secondary" : "outline"}
+                onClick={onShowPinnedNotes}
+                disabled={!onShowPinnedNotes}
+              >
+                Notas fixadas
+              </Button>
+              <Button
+                variant={activeAll ? "secondary" : "ghost"}
+                onClick={onShowAllNotes}
+                disabled={!onShowAllNotes}
+              >
+                Todas as notas
               </Button>
             </div>
           </div>

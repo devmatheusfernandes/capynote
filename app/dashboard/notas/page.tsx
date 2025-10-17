@@ -8,20 +8,25 @@ import {
   Search,
   Calendar,
   Trash2,
-  Edit,
   FileText,
   FolderPlus,
   FilePlus2,
+  Pin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { ExportImportSheet } from "@/components/ui/sheet";
 import {
@@ -67,10 +72,12 @@ import {
   mergeFolders,
   mergeTags,
 } from "@/lib/import-utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function NotasPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [folders, setFolders] = useState<FolderData[]>([]);
   const [notePendingById, setNotePendingById] = useState<
@@ -94,6 +101,14 @@ export default function NotasPage() {
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
+  // Selection and drag state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  // View filters
+  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
 
   // Subscribe to Firestore notes and folders for the authenticated user
   useEffect(() => {
@@ -135,6 +150,21 @@ export default function NotasPage() {
       });
       setFolderPendingById(pendingMap);
       setFolders(fetchedFolders);
+      // Create permanent Archive folder if missing
+      if (!fetchedFolders.some((f) => f.id === "archive") && user?.id) {
+        const now = new Date().toISOString();
+        const archiveRef = doc(
+          collection(db, "users", user.id, "folders"),
+          "archive"
+        );
+        const archiveFolder: FolderData = {
+          id: "archive",
+          name: "Arquivadas",
+          createdAt: now,
+          updatedAt: now,
+        };
+        setDoc(archiveRef, archiveFolder).catch(() => {});
+      }
     });
 
     return () => {
@@ -217,6 +247,11 @@ export default function NotasPage() {
       (folder) => folder.parentId === currentFolderId
     );
 
+    // Hide the permanent Archive folder from the folders grid
+    filteredFoldersByParent = filteredFoldersByParent.filter(
+      (folder) => folder.id !== "archive"
+    );
+
     // If there's a search term, search recursively in all folders
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
@@ -273,6 +308,18 @@ export default function NotasPage() {
       });
     }
 
+    if (showPinnedOnly) {
+      filteredNotesByFolder = filteredNotesByFolder.filter((n) => n.pinned);
+    }
+
+    // Sort: pinned on top, then by updatedAt desc
+    filteredNotesByFolder = filteredNotesByFolder.slice().sort((a, b) => {
+      const ap = a.pinned ? 1 : 0;
+      const bp = b.pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+
     setFilteredNotes(filteredNotesByFolder);
     setFilteredFolders(filteredFoldersByParent);
   }, [
@@ -281,6 +328,7 @@ export default function NotasPage() {
     currentFolderId,
     searchTerm,
     selectedTags,
+    showPinnedOnly,
     getTagNameById,
   ]);
 
@@ -301,6 +349,17 @@ export default function NotasPage() {
     downloadFile(filename, md, "text/markdown");
   }, [filteredNotes, folders, tagsById, currentFolderId]);
 
+  const handleExportMarkdownSelected = useCallback(() => {
+    const selected = notes.filter((n) => selectedNoteIds.has(n.id));
+    if (selected.length === 0) return;
+    const md = exportNotesAsMarkdown(selected, folders, tagsById);
+    const filename =
+      selected.length === 1
+        ? `${selected[0].title || selected[0].id}.md`
+        : "notas_selecionadas.md";
+    downloadFile(filename, md, "text/markdown");
+  }, [notes, selectedNoteIds, folders, tagsById]);
+
   const handleBackupAll = useCallback(() => {
     const payload = buildBackupPayload(notes, folders, availableTags);
     const json = JSON.stringify(payload, null, 2);
@@ -320,6 +379,19 @@ export default function NotasPage() {
       localStorage.setItem("backupHistory", JSON.stringify(history));
     } catch {}
   }, [notes, folders, availableTags]);
+
+  // View toggles (Sheet buttons)
+  const showPinnedView = useCallback(() => {
+    setShowPinnedOnly(true);
+  }, []);
+
+  const openArchiveFolder = useCallback(() => {
+    setCurrentFolderId("archive");
+  }, []);
+
+  const showAllView = useCallback(() => {
+    setShowPinnedOnly(false);
+  }, []);
 
   // Import para pasta atual/raiz (JSON ou Markdown)
   const triggerImportFile = useCallback(() => {
@@ -545,6 +617,122 @@ export default function NotasPage() {
     router.push(`/dashboard/notas/editar/${noteId}`);
   };
 
+  // Selection helpers
+  const toggleSelectNote = useCallback((noteId: string, checked?: boolean) => {
+    setSelectedNoteIds((prev) => {
+      const next = new Set(prev);
+      const isSelected = next.has(noteId);
+      const willSelect = typeof checked === "boolean" ? checked : !isSelected;
+      if (willSelect) next.add(noteId);
+      else next.delete(noteId);
+      setSelectionMode(next.size > 0);
+      return next;
+    });
+  }, []);
+
+  const selectAllNotes = useCallback(() => {
+    const allIds = filteredNotes.map((n) => n.id);
+    setSelectedNoteIds(new Set(allIds));
+    setSelectionMode(allIds.length > 0);
+  }, [filteredNotes]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedNoteIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
+  const deleteSelectedNotes = useCallback(async () => {
+    if (!user?.id || selectedNoteIds.size === 0) return;
+    const ids = Array.from(selectedNoteIds);
+    await Promise.all(
+      ids.map((id) => deleteDoc(doc(db, "users", user.id, "notes", id)))
+    );
+    clearSelection();
+  }, [user?.id, selectedNoteIds, clearSelection]);
+
+  const moveSelectedNotes = useCallback(
+    async (destFolderId?: string) => {
+      if (!user?.id || selectedNoteIds.size === 0) return;
+      const ids = Array.from(selectedNoteIds);
+      await Promise.all(
+        ids.map((id) =>
+          updateDoc(doc(db, "users", user.id, "notes", id), {
+            folderId: destFolderId ?? deleteField(),
+            updatedAt: new Date().toISOString(),
+          })
+        )
+      );
+      clearSelection();
+    },
+    [user?.id, selectedNoteIds, clearSelection]
+  );
+
+  const archiveSelectedNotes = useCallback(async () => {
+    if (!user?.id || selectedNoteIds.size === 0) return;
+    const ids = Array.from(selectedNoteIds);
+    await Promise.all(
+      ids.map((id) =>
+        updateDoc(doc(db, "users", user.id, "notes", id), {
+          folderId: "archive",
+          updatedAt: new Date().toISOString(),
+        })
+      )
+    );
+    clearSelection();
+  }, [user?.id, selectedNoteIds, clearSelection]);
+
+  const unarchiveSelectedNotes = useCallback(async () => {
+    if (!user?.id || selectedNoteIds.size === 0) return;
+    const ids = Array.from(selectedNoteIds);
+    await Promise.all(
+      ids.map((id) =>
+        updateDoc(doc(db, "users", user.id, "notes", id), {
+          folderId: deleteField(),
+          updatedAt: new Date().toISOString(),
+        })
+      )
+    );
+    clearSelection();
+  }, [user?.id, selectedNoteIds, clearSelection]);
+
+  const pinSelectedNotes = useCallback(async () => {
+    if (!user?.id || selectedNoteIds.size === 0) return;
+    const ids = Array.from(selectedNoteIds);
+    await Promise.all(
+      ids.map((id) =>
+        updateDoc(doc(db, "users", user.id, "notes", id), {
+          pinned: true,
+          updatedAt: new Date().toISOString(),
+        })
+      )
+    );
+    clearSelection();
+  }, [user?.id, selectedNoteIds, clearSelection]);
+
+  // Drag helpers
+  const handleNoteDragStart = useCallback(
+    (noteId: string, e: React.DragEvent) => {
+      e.dataTransfer.setData("text/plain", noteId);
+      setDraggingNoteId(noteId);
+    },
+    []
+  );
+
+  const handleNoteDragEnd = useCallback(() => {
+    setDraggingNoteId(null);
+  }, []);
+
+  const handleDropNoteToFolder = useCallback(
+    async (folderId: string, noteId: string) => {
+      if (!user?.id) return;
+      await updateDoc(doc(db, "users", user.id, "notes", noteId), {
+        folderId,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [user?.id]
+  );
+
   // Folder management functions
   const handleCreateFolder = useCallback(
     async (name: string) => {
@@ -587,6 +775,8 @@ export default function NotasPage() {
   const handleDeleteFolder = useCallback(
     async (folderId: string) => {
       if (!user?.id) return;
+      // Prevent deleting the permanent Archive folder
+      if (folderId === "archive") return;
       // Find all subfolders recursively
       const findAllSubfolders = (parentId: string): string[] => {
         const subfolders = folders.filter((f) => f.parentId === parentId);
@@ -641,36 +831,164 @@ export default function NotasPage() {
       <PageHeader
         title="Notas"
         otherButton={
-          <div className="flex flex-row items-center gap-2">
-            <Button variant="outline" onClick={() => setCreateFolderOpen(true)}>
-              <FolderPlus className="h-4 w-4" />
-              Pasta
-            </Button>
-            <Button variant="default" onClick={() => setNoteDrawerOpen(true)}>
-              <FilePlus2 className="h-4 w-4" />
-              Nota
-            </Button>
-            <ExportImportSheet
-              onExportMarkdown={handleExportMarkdownFiltered}
-              onBackupAll={handleBackupAll}
-              onImportNotes={triggerImportFile}
-              onRestoreBackup={triggerRestoreFile}
-            />
-            <input
-              ref={importFileInputRef}
-              type="file"
-              accept=".json,.md"
-              className="hidden"
-              onChange={onImportFileChange}
-            />
-            <input
-              ref={restoreFileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={onRestoreFileChange}
-            />
-          </div>
+          selectionMode ? (
+            isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary">Ações</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={selectAllNotes}>
+                    Selecionar todas
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={deleteSelectedNotes}
+                  >
+                    Excluir
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Mover</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem
+                        onClick={() => moveSelectedNotes(undefined)}
+                      >
+                        Raiz
+                      </DropdownMenuItem>
+                      {folders
+                        .filter((f) => f.id !== "archive")
+                        .map((f) => (
+                          <DropdownMenuItem
+                            key={f.id}
+                            onClick={() => moveSelectedNotes(f.id)}
+                          >
+                            {f.name}
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem onClick={handleExportMarkdownSelected}>
+                    <FileText className="h-4 w-4" />
+                    Exportar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={archiveSelectedNotes}>
+                    Arquivar
+                  </DropdownMenuItem>
+                  {Array.from(selectedNoteIds).some((id) => {
+                    const n = notes.find((note) => note.id === id);
+                    return n?.folderId === "archive";
+                  }) && (
+                    <DropdownMenuItem onClick={unarchiveSelectedNotes}>
+                      Desarquivar
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={pinSelectedNotes}>
+                    Fixar
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={clearSelection}>
+                    Cancelar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex flex-row items-center gap-2">
+                <Button variant="outline" onClick={selectAllNotes}>
+                  Selecionar todas
+                </Button>
+                <Button variant="destructive" onClick={deleteSelectedNotes}>
+                  Excluir
+                </Button>
+                {/* Move menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary">Mover</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => moveSelectedNotes(undefined)}
+                    >
+                      Raiz
+                    </DropdownMenuItem>
+                    {folders
+                      .filter((f) => f.id !== "archive")
+                      .map((f) => (
+                        <DropdownMenuItem
+                          key={f.id}
+                          onClick={() => moveSelectedNotes(f.id)}
+                        >
+                          {f.name}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  onClick={handleExportMarkdownSelected}
+                >
+                  <FileText className="h-4 w-4" />
+                  Exportar
+                </Button>
+                <Button variant="outline" onClick={archiveSelectedNotes}>
+                  Arquivar
+                </Button>
+                {Array.from(selectedNoteIds).some((id) => {
+                  const n = notes.find((note) => note.id === id);
+                  return n?.folderId === "archive";
+                }) && (
+                  <Button variant="outline" onClick={unarchiveSelectedNotes}>
+                    Desarquivar
+                  </Button>
+                )}
+                <Button variant="outline" onClick={pinSelectedNotes}>
+                  Fixar
+                </Button>
+                <Button variant="ghost" onClick={clearSelection}>
+                  Cancelar
+                </Button>
+              </div>
+            )
+          ) : (
+            <div className="flex flex-row items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateFolderOpen(true)}
+              >
+                <FolderPlus className="h-4 w-4" />
+                Pasta
+              </Button>
+              <Button variant="default" onClick={() => setNoteDrawerOpen(true)}>
+                <FilePlus2 className="h-4 w-4" />
+                Nota
+              </Button>
+              <ExportImportSheet
+                onExportMarkdown={handleExportMarkdownFiltered}
+                onBackupAll={handleBackupAll}
+                onImportNotes={triggerImportFile}
+                onRestoreBackup={triggerRestoreFile}
+                onShowPinnedNotes={showPinnedView}
+                onShowArchivedNotes={openArchiveFolder}
+                onShowAllNotes={showAllView}
+                activePinned={showPinnedOnly}
+                activeArchived={currentFolderId === "archive"}
+                activeAll={!showPinnedOnly && currentFolderId !== "archive"}
+              />
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".json,.md"
+                className="hidden"
+                onChange={onImportFileChange}
+              />
+              <input
+                ref={restoreFileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={onRestoreFileChange}
+              />
+            </div>
+          )
         }
       />
 
@@ -746,63 +1064,95 @@ export default function NotasPage() {
               onRename={handleRenameFolder}
               onDelete={handleDeleteFolder}
               syncPending={folderPendingById[folder.id]}
+              onDropNote={handleDropNoteToFolder}
             />
           ))}
 
           {/* Notes */}
-          {filteredNotes.map((note) => (
-            <Card
-              key={note.id}
-              className="cursor-pointer hover:shadow-md transition-shadow group"
-              onClick={() => handleEditNote(note.id)}
-            >
-              <CardHeader className="">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <SyncDot pending={notePendingById[note.id]} />
-                    <CardTitle className="text-md line-clamp-2 transition-colors">
-                      {note.title || "Nota sem título"}
-                    </CardTitle>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditNote(note.id);
-                      }}
-                      className="h-8 w-8 p-0 text-primary"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteNote(note.id);
-                      }}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+          {filteredNotes.map((note) => {
+            const isSelected = selectedNoteIds.has(note.id);
+            return (
+              <Card
+                key={note.id}
+                className={`relative cursor-pointer hover:shadow-md transition-shadow group ${
+                  isSelected ? "ring-2 ring-primary/50" : ""
+                } ${draggingNoteId === note.id ? "opacity-70" : ""}`}
+                draggable
+                onDragStart={(e) => handleNoteDragStart(note.id, e)}
+                onDragEnd={handleNoteDragEnd}
+                onClick={() =>
+                  selectionMode
+                    ? toggleSelectNote(note.id)
+                    : handleEditNote(note.id)
+                }
+              >
+                {/* Hover selection checkbox */}
+                <div
+                  className={`absolute top-2 left-2 z-10 ${
+                    isSelected
+                      ? ""
+                      : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                  }`}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={(checked: boolean) => {
+                      toggleSelectNote(note.id, Boolean(checked));
+                    }}
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  />
+                </div>
+                <CardHeader className="">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <SyncDot pending={notePendingById[note.id]} />
+                      {note.pinned && (
+                        <Pin
+                          className="h-4 w-4 text-amber-500"
+                          aria-label="Fixada"
+                        />
+                      )}
+                      <CardTitle className="text-md line-clamp-2 transition-colors">
+                        {note.title || "Nota sem título"}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteNote(note.id);
+                        }}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="sr-only">Mais ações</span>⋮
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="sr-only">Mais ações</span>⋮
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {/* <DropdownMenuItem
+                          <DropdownMenuItem
+                            onClick={() => {
+                              // Ativa modo de seleção e seleciona esta nota
+                              setSelectionMode(true);
+                              toggleSelectNote(note.id, true);
+                            }}
+                          >
+                            Selecionar
+                          </DropdownMenuItem>
+                          {/* <DropdownMenuItem
                           onClick={() => {
                             const json = exportNotesAsJSON([note]);
                             downloadFile(
@@ -814,62 +1164,67 @@ export default function NotasPage() {
                         >
                           Exportar (JSON)
                         </DropdownMenuItem> */}
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const md = exportNotesAsMarkdown(
-                              [note],
-                              folders,
-                              tagsById
-                            );
-                            downloadFile(
-                              `${note.title || note.id}.md`,
-                              md,
-                              "text/markdown"
-                            );
-                          }}
-                        >
-                          Exportar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {getPreviewText(note.content)}
-                </p>
-              </CardHeader>
-              <CardContent>
-                {/* Tags */}
-                {(() => {
-                  const tagNames =
-                    note.tagIds && note.tagIds.length > 0
-                      ? note.tagIds.map(getTagNameById)
-                      : note.tags || [];
-                  return tagNames.length > 0 ? (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {tagNames.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {tagNames.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{tagNames.length - 3}
-                        </Badge>
-                      )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const md = exportNotesAsMarkdown(
+                                [note],
+                                folders,
+                                tagsById
+                              );
+                              downloadFile(
+                                `${note.title || note.id}.md`,
+                                md,
+                                "text/markdown"
+                              );
+                            }}
+                          >
+                            Exportar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  ) : null;
-                })()}
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {getPreviewText(note.content)}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* Tags */}
+                  {(() => {
+                    const tagNames =
+                      note.tagIds && note.tagIds.length > 0
+                        ? note.tagIds.map(getTagNameById)
+                        : note.tags || [];
+                    return tagNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {tagNames.slice(0, 3).map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                        {tagNames.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{tagNames.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
 
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {formatDate(note.updatedAt)}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="text-xs">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {formatDate(note.updatedAt)}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

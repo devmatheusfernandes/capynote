@@ -703,34 +703,34 @@ export default function TarefasPage() {
     }
   };
 
-  // Toggle task status
-  const toggleTaskStatus = (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    // Ignore recurring occurrence IDs here; status updates are for regular tasks
-    const isOccurrence = taskId.includes("_occurrence_");
-    if (isOccurrence) return;
-    let newStatus: TaskData["status"];
-    switch (task.status) {
-      case "pendente":
-        newStatus = "em-progresso";
-        break;
-      case "em-progresso":
-        newStatus = "concluida";
-        break;
-      case "concluida":
-        newStatus = "pendente";
-        break;
-      default:
-        newStatus = "pendente";
-    }
-    if (user?.id) {
-      updateDoc(doc(db, "users", user.id, "tasks", taskId), {
-        status: newStatus,
-        updatedAt: new Date().toISOString(),
-      });
-    }
-  };
+  // // Toggle task status
+  // const toggleTaskStatus = (taskId: string) => {
+  //   const task = tasks.find((t) => t.id === taskId);
+  //   if (!task) return;
+  //   // Ignore recurring occurrence IDs here; status updates are for regular tasks
+  //   const isOccurrence = taskId.includes("_occurrence_");
+  //   if (isOccurrence) return;
+  //   let newStatus: TaskData["status"];
+  //   switch (task.status) {
+  //     case "pendente":
+  //       newStatus = "em-progresso";
+  //       break;
+  //     case "em-progresso":
+  //       newStatus = "concluida";
+  //       break;
+  //     case "concluida":
+  //       newStatus = "pendente";
+  //       break;
+  //     default:
+  //       newStatus = "pendente";
+  //   }
+  //   if (user?.id) {
+  //     updateDoc(doc(db, "users", user.id, "tasks", taskId), {
+  //       status: newStatus,
+  //       updatedAt: new Date().toISOString(),
+  //     });
+  //   }
+  // };
 
   // Mark task as completed (for checkbox)
   const markTaskCompleted = (taskId: string) => {
