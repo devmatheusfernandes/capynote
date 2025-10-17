@@ -49,6 +49,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskDrawer } from "@/components/task-drawer";
+import { TaskViewerDrawer } from "@/components/task-viewer-drawer";
 import { PageHeader } from "@/components/page-header";
 import { TagSelector } from "@/components/tag-selector";
 import SyncDot from "@/components/sync-dot";
@@ -114,6 +115,8 @@ export default function TarefasPage() {
   const [filteredTasks, setFilteredTasks] = useState<TaskData[]>([]);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
+  const [taskViewerOpen, setTaskViewerOpen] = useState(false);
+  const [viewingTask, setViewingTask] = useState<TaskData | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [recurringDeleteDialogOpen, setRecurringDeleteDialogOpen] =
@@ -938,11 +941,8 @@ export default function TarefasPage() {
                       : "text-text"
                   } cursor-pointer hover:underline`}
                   onClick={() => {
-                    const taskToEdit = isRecurringOccurrence
-                      ? tasks.find((t) => t.id === originalTaskId) || task
-                      : task;
-                    setEditingTask(taskToEdit);
-                    setTaskDrawerOpen(true);
+                    setViewingTask(task);
+                    setTaskViewerOpen(true);
                   }}
                 >
                   <span className="inline-flex items-center gap-2">
@@ -1172,7 +1172,14 @@ export default function TarefasPage() {
                   }}
                 />
               )}
-              <CardTitle className="text-xs font-medium line-clamp-2 flex-1 flex items-center gap-2">
+              <CardTitle
+                className="text-xs font-medium line-clamp-2 flex-1 flex items-center gap-2 cursor-pointer hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViewingTask(task);
+                  setTaskViewerOpen(true);
+                }}
+              >
                 {(() => {
                   const baseId = task.id.includes("_occurrence_")
                     ? task.id.split("_occurrence_")[0]
@@ -1757,6 +1764,43 @@ export default function TarefasPage() {
             }
           }}
           editingTask={editingTask}
+        />
+
+        {/* Task Viewer Drawer */}
+        <TaskViewerDrawer
+          open={taskViewerOpen}
+          onOpenChange={(open) => {
+            setTaskViewerOpen(open);
+            if (!open) {
+              setViewingTask(null);
+            }
+          }}
+          task={viewingTask}
+          onEdit={(task) => {
+            setEditingTask(task);
+            setTaskDrawerOpen(true);
+            setTaskViewerOpen(false);
+          }}
+          onDelete={(task) => handleDeleteTask(task.id)}
+          onToggleComplete={(task, checked) => {
+            const isOccurrence = task.id.includes("_occurrence_");
+            if (checked) {
+              if (isOccurrence) {
+                if (task.dueDate) markRecurringOccurrenceCompleted(task.id, task.dueDate);
+              } else {
+                markTaskCompleted(task.id);
+              }
+            } else {
+              if (isOccurrence) {
+                if (task.dueDate) unmarkRecurringOccurrenceCompleted(task.id, task.dueDate);
+              } else {
+                updateTaskStatus(task.id, "pendente");
+              }
+            }
+          }}
+          onToggleSubtask={(taskId, subtaskId, checked) =>
+            toggleSubtaskStatus(taskId, subtaskId, checked)
+          }
         />
 
         {/* Delete Confirmation Dialog */}

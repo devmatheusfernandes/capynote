@@ -697,16 +697,16 @@ export function TaskDrawer({
               </Button>
             </div>
             {/* Subtarefas */}
-            <div className="flex-shrink-0 mb-2">
+            <div className="flex-shrink-0 mb-2 ">
+              <label className="text-sm font-medium text-muted-foreground block">
+                Subtarefas
+              </label>
               <div className="space-y-2">
                 {subtasks.map((st) => (
                   <div
                     key={st.id}
                     className="flex flex-col items-start gap-2 mt-2"
                   >
-                    <label className="text-sm font-medium text-muted-foreground block">
-                      Subtarefas
-                    </label>
                     <div className="flex flex-row gap-2 w-full">
                       <Input
                         value={st.title}
