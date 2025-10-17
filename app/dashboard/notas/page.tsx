@@ -400,50 +400,41 @@ export default function NotasPage() {
 
   const onImportFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !user?.id) return;
-      const text = await file.text();
-      const isMarkdown =
-        file.name.toLowerCase().endsWith(".md") ||
-        file.type === "text/markdown";
-      if (isMarkdown) {
-        // Import single markdown as one note
-        const content = markdownToLexical(text);
-        const title = deriveTitleFromMarkdown(
-          text,
-          file.name.replace(/\.md$/, "")
+      const files = e.target.files;
+      if (!files || files.length === 0 || !user?.id) return;
+
+      try {
+        // Processar múltiplos arquivos
+        const fileArray = Array.from(files);
+        
+        // Separar arquivos Markdown e JSON
+        const markdownFiles = fileArray.filter(file => 
+          file.name.toLowerCase().endsWith(".md") || file.type === "text/markdown"
         );
-        const noteRef = doc(collection(db, "users", user.id, "notes"));
-        const note: NoteData = {
-          id: noteRef.id,
-          title: title || "Nota importada",
-          content,
-          folderId: currentFolderId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          tags: [],
-          tagIds: [],
-        };
-        const payload = Object.fromEntries(
-          Object.entries(note).filter(([, v]) => v !== undefined)
+        const jsonFiles = fileArray.filter(file => 
+          file.name.toLowerCase().endsWith(".json") || file.type === "application/json"
         );
-        await setDoc(noteRef, payload);
-      } else {
-        // JSON: pode ser nota única, array de notas
-        const parsed = parseJSONFile(text);
-        if (Array.isArray(parsed)) {
+
+        // Processar arquivos Markdown (múltiplos)
+        if (markdownFiles.length > 0) {
           await Promise.all(
-            parsed.map(async (n) => {
+            markdownFiles.map(async (file) => {
+              const text = await file.text();
+              const content = markdownToLexical(text);
+              const title = deriveTitleFromMarkdown(
+                text,
+                file.name.replace(/\.md$/, "")
+              );
               const noteRef = doc(collection(db, "users", user.id, "notes"));
               const note: NoteData = {
                 id: noteRef.id,
-                title: n.title || "Nota importada",
-                content: n.content || "",
+                title: title || "Nota importada",
+                content,
                 folderId: currentFolderId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                tags: n.tags || [],
-                tagIds: n.tagIds || [],
+                tags: [],
+                tagIds: [],
               };
               const payload = Object.fromEntries(
                 Object.entries(note).filter(([, v]) => v !== undefined)
@@ -451,34 +442,72 @@ export default function NotasPage() {
               await setDoc(noteRef, payload);
             })
           );
-        } else if (
-          (parsed as BackupPayload)?.notes ||
-          (parsed as BackupPayload)?.folders ||
-          (parsed as BackupPayload)?.tags
-        ) {
-          // Se for payload de backup, sugerimos usar a ação de Restore
-          alert(
-            "Este arquivo parece um backup. Use 'Restaurar backup' para mesclar os dados."
-          );
-        } else {
-          const n = parsed as NoteData;
-          const noteRef = doc(collection(db, "users", user.id, "notes"));
-          const note: NoteData = {
-            id: noteRef.id,
-            title: n.title || "Nota importada",
-            content: n.content || "",
-            folderId: currentFolderId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            tags: n.tags || [],
-            tagIds: n.tagIds || [],
-          };
-          const payload = Object.fromEntries(
-            Object.entries(note).filter(([, v]) => v !== undefined)
-          );
-          await setDoc(noteRef, payload);
         }
+
+        // Processar arquivos JSON (um por vez, como antes)
+        for (const file of jsonFiles) {
+          const text = await file.text();
+          const parsed = parseJSONFile(text);
+          
+          if (Array.isArray(parsed)) {
+            await Promise.all(
+              parsed.map(async (n) => {
+                const noteRef = doc(collection(db, "users", user.id, "notes"));
+                const note: NoteData = {
+                  id: noteRef.id,
+                  title: n.title || "Nota importada",
+                  content: n.content || "",
+                  folderId: currentFolderId,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  tags: n.tags || [],
+                  tagIds: n.tagIds || [],
+                };
+                const payload = Object.fromEntries(
+                  Object.entries(note).filter(([, v]) => v !== undefined)
+                );
+                await setDoc(noteRef, payload);
+              })
+            );
+          } else if (
+            (parsed as BackupPayload)?.notes ||
+            (parsed as BackupPayload)?.folders ||
+            (parsed as BackupPayload)?.tags
+          ) {
+            // Se for payload de backup, sugerimos usar a ação de Restore
+            alert(
+              "Este arquivo parece um backup. Use 'Restaurar backup' para mesclar os dados."
+            );
+          } else {
+            const n = parsed as NoteData;
+            const noteRef = doc(collection(db, "users", user.id, "notes"));
+            const note: NoteData = {
+              id: noteRef.id,
+              title: n.title || "Nota importada",
+              content: n.content || "",
+              folderId: currentFolderId,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              tags: n.tags || [],
+              tagIds: n.tagIds || [],
+            };
+            const payload = Object.fromEntries(
+              Object.entries(note).filter(([, v]) => v !== undefined)
+            );
+            await setDoc(noteRef, payload);
+          }
+        }
+
+        // Mostrar mensagem de sucesso
+        const totalFiles = markdownFiles.length + jsonFiles.length;
+        if (totalFiles > 1) {
+          alert(`${totalFiles} arquivos importados com sucesso!`);
+        }
+      } catch (error) {
+        console.error("Erro ao importar arquivos:", error);
+        alert("Erro ao importar arquivos. Verifique o formato dos arquivos.");
       }
+
       // limpa input
       e.target.value = "";
     },
@@ -977,6 +1006,7 @@ export default function NotasPage() {
                 ref={importFileInputRef}
                 type="file"
                 accept=".json,.md"
+                multiple
                 className="hidden"
                 onChange={onImportFileChange}
               />
