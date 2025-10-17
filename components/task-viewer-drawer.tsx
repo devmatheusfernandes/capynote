@@ -148,6 +148,11 @@ export function TaskViewerDrawer({
     ? task.id.includes("_occurrence_")
     : false;
 
+  const [localTask, setLocalTask] = React.useState<TaskData | null>(task ?? null);
+  React.useEffect(() => {
+    setLocalTask(task ?? null);
+  }, [task]);
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="h-[75vh] flex flex-col">
@@ -192,11 +197,21 @@ export function TaskViewerDrawer({
                 <div className="flex-1">
                   <div className="flex flex-row items-center gap-2">
                     <Checkbox
-                      checked={task.status === "concluida"}
+                      checked={localTask?.status === "concluida"}
                       onCheckedChange={(checked) => {
                         if (onToggleComplete && task) {
                           onToggleComplete(task, Boolean(checked));
                         }
+                        // Atualização otimista imediata no Drawer
+                        setLocalTask((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                status: Boolean(checked) ? "concluida" : "pendente",
+                                updatedAt: new Date().toISOString(),
+                              }
+                            : prev
+                        );
                       }}
                       aria-label="Concluir tarefa"
                     />
@@ -254,7 +269,7 @@ export function TaskViewerDrawer({
                     Subtarefas
                   </div>
                   <div className="space-y-2">
-                    {task.subtasks.map((st) => (
+                    {(localTask?.subtasks ?? task.subtasks).map((st) => (
                       <div key={st.id} className="flex items-center gap-2">
                         <Checkbox
                           checked={st.status === "concluida"}
@@ -262,6 +277,26 @@ export function TaskViewerDrawer({
                             if (onToggleSubtask && !isRecurringOccurrence) {
                               onToggleSubtask(task.id, st.id, Boolean(checked));
                             }
+                            // Atualização otimista imediata da subtarefa
+                            setLocalTask((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    subtasks: (prev.subtasks || []).map((s) =>
+                                      s.id === st.id
+                                        ? {
+                                            ...s,
+                                            status: Boolean(checked)
+                                              ? "concluida"
+                                              : "pendente",
+                                            updatedAt: new Date().toISOString(),
+                                          }
+                                        : s
+                                    ),
+                                    updatedAt: new Date().toISOString(),
+                                  }
+                                : prev
+                            );
                           }}
                           disabled={isRecurringOccurrence}
                           className="flex-shrink-0"
@@ -284,11 +319,11 @@ export function TaskViewerDrawer({
               <div className="flex flex-wrap items-end gap-2 pt-4">
                 <Badge
                   variant="outline"
-                  className={getStatusColor(task.status)}
+                  className={getStatusColor(localTask?.status ?? task.status)}
                 >
-                  {task.status === "em-progresso"
+                  {(localTask?.status ?? task.status) === "em-progresso"
                     ? "Em Progresso"
-                    : task.status === "concluida"
+                    : (localTask?.status ?? task.status) === "concluida"
                     ? "Concluída"
                     : "Pendente"}
                 </Badge>

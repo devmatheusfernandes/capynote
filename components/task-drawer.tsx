@@ -294,6 +294,7 @@ export function TaskDrawer({
     setDoc(taskRef, payload, { merge: true });
 
     setHasChanges(false);
+    handleClose();
   }, [
     title,
     description,
