@@ -48,7 +48,7 @@
   padding: 8px;
   caret-color: hsl(var(--foreground));
   color: hsl(var(--foreground));
-  line-height: 1.6;
+  line-height: 1.1;
   overflow-y: auto;
   overflow-x: hidden;
   /* scrollbar-width: none;
@@ -89,7 +89,7 @@
 
 /* Typography */
 .editor-paragraph {
-  margin: 0 0 8px 0;
+  margin: 0 0 7px 0;
   position: relative;
 }
 
@@ -211,9 +211,9 @@
 
 /* Quotes */
 .editor-quote {
-  margin: 16px 0;
   padding-left: 16px;
-  border-left: 4px solid hsl(var(--border));
+  border-left: 4px solid red;
+  border-radius: 4px;
   color: hsl(var(--muted-foreground));
   font-style: italic;
 }
@@ -319,12 +319,12 @@
   }
   
   .editor-text-code {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
+    background-color: rgb(185, 179, 179);
+    color: rgb(46, 46, 46);
   }
   
   .editor-code {
-    background-color: hsl(var(--muted));
+    background-color: rgb(55, 49, 61);
     color: hsl(var(--foreground));
   }
 }

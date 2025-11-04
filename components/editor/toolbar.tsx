@@ -9,6 +9,7 @@ import {
   SELECTION_CHANGE_COMMAND,
   TextFormatType,
 } from "lexical";
+import { $setBlocksType } from "@lexical/selection";
 import {
   $createHeadingNode,
   $createQuoteNode,
@@ -135,22 +136,6 @@ const createButtonsList = (
         title="Sublinhado (Ctrl+U)"
       >
         <Underline className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 3,
-    component: (
-      <Button
-        key="strikethrough"
-        variant={isStrikethrough ? "default" : "ghost"}
-        size="sm"
-        onClick={() => actions.formatText("strikethrough")}
-        className={`toolbar-button ${isStrikethrough ? "active" : ""}`}
-        data-state={isStrikethrough ? "on" : "off"}
-        title="Riscado"
-      >
-        <Strikethrough className="h-4 w-4" />
       </Button>
     ),
   },
@@ -450,8 +435,17 @@ export default function Toolbar({
     editor.update(() => {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        const quoteNode = $createQuoteNode();
-        $insertNodeToNearestRoot(quoteNode);
+        const anchor = selection.anchor;
+        const focus = selection.focus;
+        const nodes = selection.getNodes();
+
+        // Pega o elemento de bloco atual
+        const element = anchor.getNode().getTopLevelElement();
+
+        if (element && element.getType() !== "quote") {
+          // Converte o bloco atual em quote
+          $setBlocksType(selection, () => $createQuoteNode());
+        }
       }
     });
   };
@@ -462,8 +456,28 @@ export default function Toolbar({
 
   const insertCodeBlock = () => {
     editor.update(() => {
-      const codeNode = $createCodeNode();
-      $insertNodeToNearestRoot(codeNode);
+      const selection = $getSelection();
+
+      if ($isRangeSelection(selection)) {
+        // Pega o nó do bloco atual
+        const anchorNode = selection.anchor.getNode();
+        const element = anchorNode.getTopLevelElementOrThrow();
+
+        // Cria o novo nó de código
+        const codeNode = $createCodeNode();
+
+        // Transfere o conteúdo do bloco atual para o código
+        const children = element.getChildren();
+        children.forEach((child) => {
+          codeNode.append(child);
+        });
+
+        // Substitui o elemento atual pelo bloco de código
+        element.replace(codeNode);
+
+        // Move o cursor para o final do bloco de código
+        codeNode.selectEnd();
+      }
     });
   };
 
