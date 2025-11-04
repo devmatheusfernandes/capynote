@@ -9,7 +9,7 @@ import {
   SELECTION_CHANGE_COMMAND,
   TextFormatType,
 } from "lexical";
-import { $setBlocksType } from "@lexical/selection";
+import { $setBlocksType, $patchStyleText } from "@lexical/selection";
 import {
   $createHeadingNode,
   $createQuoteNode,
@@ -19,7 +19,6 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
 } from "@lexical/list";
-import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   INSERT_HORIZONTAL_RULE_COMMAND,
   HorizontalRuleNode,
@@ -27,9 +26,16 @@ import {
 import { $createCodeNode } from "@lexical/code";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link"; // Usando TOGGLE_LINK_COMMAND
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, Fragment } from "react";
+import { $isTextNode } from "lexical";
 import type { CSSProperties, JSX } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Bold,
   Italic,
@@ -49,6 +55,8 @@ import {
   BookOpenText,
   Hash,
   SquareTerminal,
+  Highlighter,
+  Palette,
 } from "lucide-react";
 
 export { HorizontalRuleNode };
@@ -74,6 +82,8 @@ type ToolbarActions = {
   insertWikiLink: () => void;
   insertTag: () => void;
   onToggleReadMode: () => void;
+  toggleHighlight: () => void;
+  setTextColor: (color: string) => void;
 };
 
 // O componente que representa cada botão
@@ -140,6 +150,21 @@ const createButtonsList = (
     ),
   },
   {
+    id: 3,
+    component: (
+      <Button
+        key="highlight"
+        variant="ghost"
+        size="sm"
+        onClick={actions.toggleHighlight}
+        className="toolbar-button"
+        title="Destaque (fundo amarelo)"
+      >
+        <Highlighter className="h-4 w-4" />
+      </Button>
+    ),
+  },
+  {
     id: 4,
     component: (
       <Button
@@ -153,6 +178,54 @@ const createButtonsList = (
       >
         <Code className="h-4 w-4" />
       </Button>
+    ),
+  },
+  {
+    id: 17,
+    component: (
+      <DropdownMenu key="text-color">
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="toolbar-button"
+            title="Cor do texto"
+          >
+            <Palette className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {[
+            { label: "Sem cor", value: "" },
+            { label: "Vermelho", value: "#ef4444" },
+            { label: "Laranja", value: "#f97316" },
+            { label: "Amarelo", value: "#eab308" },
+            { label: "Verde", value: "#22c55e" },
+            { label: "Azul", value: "#3b82f6" },
+            { label: "Roxo", value: "#a855f7" },
+            { label: "Cinza", value: "#6b7280" },
+            { label: "Preto", value: "#111827" },
+          ].map((c) => (
+            <DropdownMenuItem
+              key={c.label}
+              onClick={() => actions.setTextColor(c.value)}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 12,
+                  height: 12,
+                  borderRadius: 2,
+                  marginRight: 8,
+                  backgroundColor: c.value || "transparent",
+                  border: c.value ? "1px solid rgba(0,0,0,0.2)" : "1px dashed rgba(0,0,0,0.3)",
+                }}
+              />
+              {c.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     ),
   },
   {
@@ -417,8 +490,7 @@ export default function Toolbar({
     editor.update(() => {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        const headingNode = $createHeadingNode(headingSize);
-        selection.insertNodes([headingNode]);
+        $setBlocksType(selection, () => $createHeadingNode(headingSize));
       }
     });
   };
@@ -510,6 +582,50 @@ export default function Toolbar({
       }
     });
   };
+  const toggleHighlight = () => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        const HIGHLIGHT_COLOR = "#ffd54f"; // laranja/âmbar
+        const nodes = selection.getNodes();
+
+        let anyHighlighted = false;
+        let allHighlightedWithTarget = true;
+
+        for (const node of nodes) {
+          if ($isTextNode(node)) {
+            const style = node.getStyle() || "";
+            const hasBg = /background-color\s*:\s*[^;]+/i.test(style);
+            if (hasBg) anyHighlighted = true;
+            if (!new RegExp(`background-color\\s*:\\s*${HIGHLIGHT_COLOR}`, "i").test(style)) {
+              allHighlightedWithTarget = false;
+            }
+          }
+        }
+
+        if (anyHighlighted && allHighlightedWithTarget) {
+          // Remove o destaque quando já estiver com a mesma cor
+          $patchStyleText(selection, { "background-color": "", color: "" });
+        } else {
+          // Aplica/atualiza para a cor padrão de destaque
+          $patchStyleText(selection, { "background-color": HIGHLIGHT_COLOR, color: "#000000" });
+        }
+      }
+    });
+  };
+
+  const setTextColor = (color: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        if (!color) {
+          $patchStyleText(selection, { color: "", "background-color": "" });
+        } else {
+          $patchStyleText(selection, { color });
+        }
+      }
+    });
+  };
   // --- Fim das Funções de Ação Lexical ---
 
   // Objeto de ações para ser passado para createButtonsList
@@ -524,6 +640,8 @@ export default function Toolbar({
     insertWikiLink,
     insertTag,
     onToggleReadMode: onToggleReadMode || (() => {}),
+    toggleHighlight,
+    setTextColor,
   };
 
   // A lista de botões é re-criada AQUI para refletir os estados is* atuais
@@ -651,7 +769,9 @@ export default function Toolbar({
         {(isExpanded && hasOverflow
           ? buttons
           : buttons.filter((b) => visibleButtons.includes(b.id))
-        ).map((button) => button.component)}
+        ).map((button) => (
+          <Fragment key={button.id}>{button.component}</Fragment>
+        ))}
 
         {/* Botão de expandir - só aparece se houver overflow */}
         {hasOverflow && (
