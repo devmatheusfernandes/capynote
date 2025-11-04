@@ -23,6 +23,7 @@ import {
   $getRoot,
   $createParagraphNode,
   $createTextNode,
+  $getNodeByKey,
 } from "lexical";
 import {
   ObsidianPlugin,
@@ -31,7 +32,17 @@ import {
 } from "./plugins/obsidian-plugin";
 import Toolbar from "./toolbar";
 import "./note-editor.css";
-import React from "react";
+import React, { useEffect, useState } from "react";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface LexicalSerializedEditorState {
   root: {
@@ -313,10 +324,11 @@ export default function NoteEditorWithToolbar({
             <LinkPlugin />
             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
             <TabIndentationPlugin />
-            <ObsidianPlugin />
-            <MyOnChangePlugin onChange={(s) => onChange?.(s)} />
-            <InitialValuePlugin initialValue={initialValue} />
-            <EditableTogglePlugin editable={!openReadMode} />
+          <ObsidianPlugin />
+          <WikilinkEditDrawerPlugin />
+          <MyOnChangePlugin onChange={(s) => onChange?.(s)} />
+          <InitialValuePlugin initialValue={initialValue} />
+          <EditableTogglePlugin editable={!openReadMode} />
           </div>
         </div>
         {showToolbar && !openReadMode && (
@@ -327,5 +339,85 @@ export default function NoteEditorWithToolbar({
       {/* Adiciona padding bottom para compensar a toolbar fixa */}
       {showToolbar && !openReadMode && <div className="toolbar-spacer" />}
     </div>
+  );
+}
+
+function WikilinkEditDrawerPlugin() {
+  const [editor] = useLexicalComposerContext();
+  const [open, setOpen] = useState(false);
+  const [nodeKey, setNodeKey] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    const onEdit = (e: Event) => {
+      const detail = (e as CustomEvent<{ key: string }>).detail;
+      const key = detail?.key;
+      if (!key) return;
+      setNodeKey(key);
+      editor.update(() => {
+        const node = $getNodeByKey(key);
+        if (!node || !(node instanceof WikiLinkNode)) return;
+        setTitle(node.getTextContent());
+        setOpen(true);
+      });
+    };
+    window.addEventListener("wikilink-edit", onEdit as EventListener);
+    return () => {
+      window.removeEventListener("wikilink-edit", onEdit as EventListener);
+    };
+  }, [editor]);
+
+  const onSave = () => {
+    if (!nodeKey) return;
+    const trimmed = title.trim();
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey!);
+      if (!node || !(node instanceof WikiLinkNode)) return;
+      if (trimmed.length === 0) {
+        node.replace($createTextNode(node.getTextContent()));
+      } else {
+        node.setTextContent(trimmed);
+      }
+    });
+    setOpen(false);
+  };
+
+  const onDelete = () => {
+    if (!nodeKey) return;
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey!);
+      if (!node || !(node instanceof WikiLinkNode)) return;
+      node.replace($createTextNode(node.getTextContent()));
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Editar Wikilink</DrawerTitle>
+        </DrawerHeader>
+        <div className="p-4 flex flex-col gap-3">
+          <label className="text-sm">Título do link</label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título do wikilink"
+          />
+        </div>
+        <DrawerFooter>
+          <div className="flex gap-2">
+            <Button onClick={onSave}>Salvar</Button>
+            <Button variant="outline" onClick={onDelete}>
+              Remover link
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DrawerClose>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
