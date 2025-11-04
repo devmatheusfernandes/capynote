@@ -6,6 +6,8 @@
   display: flex;
   flex-direction: column;
   padding: 16px;
+  margin-left: 15vw;
+  margin-right: 15vw;
 }
 
 .note-editor-with-toolbar .editor-container {
@@ -334,6 +336,12 @@
   .editor-input {
     padding: 16px;
     font-size: 16px;
+  }
+
+  .note-editor-with-toolbar {
+    margin-left: 1vw;
+    margin-right: 1vw;
+    padding: 10px;
   }
   
   .editor-placeholder {
