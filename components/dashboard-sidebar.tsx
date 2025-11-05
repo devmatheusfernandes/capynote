@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   User,
+  Book,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -17,6 +18,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,10 +146,39 @@ function AppSidebar() {
   const { logout, user } = useAuth();
   const { lastUser } = useLastUser();
   const avatarUrl = user?.photoURL ?? lastUser?.photoURL ?? undefined;
+  const [showBibleInSidebar, setShowBibleInSidebar] = React.useState<boolean>(true);
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
   };
+
+  // Assinar preferência de exibir Bíblia (mesma flag usada no dashboard)
+  React.useEffect(() => {
+    if (!user?.id) return;
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    const unsub = onSnapshot(settingsRef, (snap) => {
+      const data = snap.data() as { showBibleOnDashboard?: boolean } | undefined;
+      if (typeof data?.showBibleOnDashboard === "boolean") {
+        setShowBibleInSidebar(data.showBibleOnDashboard);
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  const navItems = React.useMemo(() => {
+    const items = [...navigationItems];
+    if (showBibleInSidebar) {
+      // Inserir Bíblia após "Notas"
+      const insertIndex = items.findIndex((i) => i.title === "Tarefas");
+      const bibleItem = { title: "Bíblia", url: "/dashboard/biblia", icon: Book };
+      if (insertIndex > 0) {
+        items.splice(insertIndex, 0, bibleItem);
+      } else {
+        items.push(bibleItem);
+      }
+    }
+    return items;
+  }, [showBibleInSidebar]);
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -188,7 +220,7 @@ function AppSidebar() {
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

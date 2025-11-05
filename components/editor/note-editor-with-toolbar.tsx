@@ -9,6 +9,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import BibleReferenceAutoLink from "./plugins/bible-reference-plugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import type { EditorState, LexicalNode } from "lexical";
@@ -33,6 +34,7 @@ import {
 import Toolbar from "./toolbar";
 import "./note-editor.css";
 import React, { useEffect, useState } from "react";
+import BibleReferenceHandler from "./bible-reference-handler";
 import {
   Drawer,
   DrawerContent,
@@ -322,6 +324,7 @@ export default function NoteEditorWithToolbar({
             <HistoryPlugin />
             <ListPlugin />
             <LinkPlugin />
+            <BibleReferenceAutoLink />
             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
             <TabIndentationPlugin />
           <ObsidianPlugin />
@@ -335,6 +338,8 @@ export default function NoteEditorWithToolbar({
           <Toolbar onToggleReadMode={onOpenReadMode} />
         )}
       </LexicalComposer>
+
+      <BibleReferenceHandler />
 
       {/* Adiciona padding bottom para compensar a toolbar fixa */}
       {showToolbar && !openReadMode && <div className="toolbar-spacer" />}

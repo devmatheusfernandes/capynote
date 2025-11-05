@@ -1,4 +1,4 @@
-[
+export const BIBLE_BOOKS_PT = [
   "Gênesis",
   "Êxodo",
   "Levítico",
@@ -60,4 +60,4 @@
   "2 Pedro",
   "1 João",
   "Apocalipse",
-];
+] as const;

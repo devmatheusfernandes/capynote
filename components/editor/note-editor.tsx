@@ -9,6 +9,8 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import BibleReferenceAutoLink from "./plugins/bible-reference-plugin";
+import BibleReferenceHandler from "./bible-reference-handler";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 
@@ -160,10 +162,12 @@ export default function NoteEditor({
           <HistoryPlugin />
           <ListPlugin />
           <LinkPlugin />
+          <BibleReferenceAutoLink />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <TabIndentationPlugin />
           <ObsidianPlugin />
           <MyOnChangePlugin onChange={onChange} />
+          <BibleReferenceHandler />
         </div>
       </div>
     </LexicalComposer>

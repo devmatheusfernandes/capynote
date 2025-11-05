@@ -227,6 +227,30 @@ export function TaskDrawer({
     { minConfidence: 0.7 }
   );
 
+  // Handle drawer close
+  const handleClose = useCallback(() => {
+    onOpenChange(false);
+    // Reset state after a delay to allow drawer animation
+    setTimeout(() => {
+      setTitle("");
+      setDescription("");
+      setTags([]);
+      setPriority("media");
+      setStatus("pendente");
+      setDueDate("");
+      setDueTime("");
+      setHasChanges(false);
+      // Reset repetição
+      setIsRecurring(false);
+      setRecurringType("daily");
+      setRecurringInterval(1);
+      setRecurringDays([]);
+      setRecurringEndDate("");
+      setRecurringEndCount(undefined);
+      setSubtasks([]);
+    }, 300);
+  }, [onOpenChange]);
+
   // Manual save functionality
   const saveTask = useCallback(() => {
     if (!title.trim()) return;
@@ -314,6 +338,7 @@ export function TaskDrawer({
     editingTask?.createdAt,
     subtasks,
     defaultTaskTime,
+    handleClose,
   ]);
 
   // Generate new task ID when drawer opens
@@ -470,29 +495,7 @@ export function TaskDrawer({
     setHasChanges(true);
   }, []);
 
-  // Handle drawer close
-  const handleClose = useCallback(() => {
-    onOpenChange(false);
-    // Reset state after a delay to allow drawer animation
-    setTimeout(() => {
-      setTitle("");
-      setDescription("");
-      setTags([]);
-      setPriority("media");
-      setStatus("pendente");
-      setDueDate("");
-      setDueTime("");
-      setHasChanges(false);
-      // Reset repetição
-      setIsRecurring(false);
-      setRecurringType("daily");
-      setRecurringInterval(1);
-      setRecurringDays([]);
-      setRecurringEndDate("");
-      setRecurringEndCount(undefined);
-      setSubtasks([]);
-    }, 300);
-  }, [onOpenChange]);
+  
 
   // Handle discard - show confirmation dialog
   const handleDiscard = useCallback(() => {

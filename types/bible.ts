@@ -1,7 +1,8 @@
-type Bible = {
+export type Bible = {
   [book: string]: {
     [chapter: string]: {
-      [verse: string]: string;
+      versos: { [verse: string]: string };
+      notas?: string;
     };
   };
 };
@@ -9,14 +10,19 @@ type Bible = {
 /*
 
 {
-    "Nome do Livro": {
-      "Número do Capítulo": {
-        "Número do Versículo": "Texto do Versículo"
-      }
+  "Gênesis": {
+    "1": {
+      "versos": {
+        "1": "No princípio Deus criou os céus e a terra.",
+        "2": "A terra era vazia e deserta, ..."
+      },
+      "notas": "^ Gên. 1:2 Ou: ..."
     }
   }
+}
 
-  data["Gênesis"]["1"]["1"]
+// Acesso:
+// data["Gênesis"]["1"].versos["1"]
 
 
 */

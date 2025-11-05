@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -72,6 +73,7 @@ export default function ConfiguracoesPage() {
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
   const [backupIntervalHours, setBackupIntervalHours] = useState<number>(24);
   const [backupPreferredTime, setBackupPreferredTime] = useState<string>("");
+  const [showBibleOnDashboard, setShowBibleOnDashboard] = useState<boolean>(true);
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
@@ -118,6 +120,7 @@ export default function ConfiguracoesPage() {
             lastBackupAt?: string;
             backupIntervalHours?: number;
             backupPreferredTime?: string;
+            showBibleOnDashboard?: boolean;
           }
         | undefined;
       if (data?.defaultTaskTime) setDefaultTaskTime(data.defaultTaskTime);
@@ -131,6 +134,8 @@ export default function ConfiguracoesPage() {
         setBackupIntervalHours(data.backupIntervalHours);
       if (typeof data?.backupPreferredTime === "string")
         setBackupPreferredTime(data.backupPreferredTime);
+      if (typeof data?.showBibleOnDashboard === "boolean")
+        setShowBibleOnDashboard(data.showBibleOnDashboard);
     });
     setPermission(
       typeof Notification !== "undefined" ? Notification.permission : "default"
@@ -145,6 +150,17 @@ export default function ConfiguracoesPage() {
     await setDoc(
       settingsRef,
       { defaultTaskTime: value, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
+  };
+
+  const toggleShowBibleOnDashboard = async (next: boolean) => {
+    if (!user?.id) return;
+    setShowBibleOnDashboard(next);
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    await setDoc(
+      settingsRef,
+      { showBibleOnDashboard: next, updatedAt: new Date().toISOString() },
       { merge: true }
     );
   };
@@ -516,6 +532,27 @@ export default function ConfiguracoesPage() {
                 </p>
               </div>
               <ThemeToggle />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Dashboard</CardTitle>
+            <CardDescription>Escolha o que aparece no dashboard.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Mostrar Bíblia no Dashboard</label>
+                <p className="text-sm text-muted-foreground">
+                  Exibe um card de acesso rápido à Bíblia na página inicial.
+                </p>
+              </div>
+              <Checkbox
+                checked={showBibleOnDashboard}
+                onCheckedChange={(v) => toggleShowBibleOnDashboard(Boolean(v))}
+              />
             </div>
           </CardContent>
         </Card>

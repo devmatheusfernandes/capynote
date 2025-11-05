@@ -40,7 +40,6 @@ import {
   Bold,
   Italic,
   Underline,
-  Strikethrough,
   Code,
   Heading1,
   Heading2,
@@ -510,8 +509,6 @@ export default function Toolbar({
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         const anchor = selection.anchor;
-        const focus = selection.focus;
-        const nodes = selection.getNodes();
 
         // Pega o elemento de bloco atual
         const element = anchor.getNode().getTopLevelElement();

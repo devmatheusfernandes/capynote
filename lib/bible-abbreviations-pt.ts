@@ -1,0 +1,88 @@
+// Normaliza abreviações comuns para o nome canônico do livro
+export const BOOK_ABBREVIATIONS: Record<string, string> = {
+  // Antigo Testamento
+  gn: "Gênesis",
+  gên: "Gênesis",
+  êx: "Êxodo",
+  ex: "Êxodo",
+  lv: "Levítico",
+  nm: "Números",
+  dt: "Deuteronômio",
+  js: "Josué",
+  jz: "Juízes",
+  rt: "Rute",
+  "1 sm": "1 Samuel",
+  "2 sm": "2 Samuel",
+  "1 rs": "1 Reis",
+  "2 rs": "2 Reis",
+  "1 cr": "1 Crônicas",
+  "2 cr": "2 Crônicas",
+  ed: "Esdras",
+  ne: "Neemias",
+  est: "Ester",
+  jó: "Jó",
+  sl: "Salmo",
+  pv: "Provérbios",
+  ec: "Eclesiastes",
+  ct: "Cântico de Salomão",
+  is: "Isaías",
+  jr: "Jeremias",
+  lm: "Lamentações",
+  ez: "Ezequiel",
+  dn: "Daniel",
+  os: "Oseias",
+  jl: "Joel",
+  am: "Amós",
+  jn: "Jonas",
+  mq: "Miqueias",
+  na: "Naum",
+  hc: "Habacuque",
+  sf: "Sofonias",
+  ag: "Ageu",
+  zc: "Zacarias",
+  ml: "Malaquias",
+  // Novo Testamento
+  mt: "Mateus",
+  mat: "Mateus",
+  mateus: "Mateus",
+  mc: "Marcos",
+  marcos: "Marcos",
+  lc: "Lucas",
+  lucas: "Lucas",
+  jo: "João",
+  joão: "João",
+  at: "Atos",
+  atos: "Atos",
+  rm: "Romanos",
+  romanos: "Romanos",
+  "1 co": "1 Coríntios",
+  "2 co": "2 Coríntios",
+  gl: "Gálatas",
+  ef: "Efésios",
+  fp: "Filipenses",
+  cl: "Colossenses",
+  "1 ts": "1 Tessalonicenses",
+  "2 ts": "2 Tessalonicenses",
+  "1 tm": "1 Timóteo",
+  "2 tm": "2 Timóteo",
+  tt: "Tito",
+  hb: "Hebreus",
+  tg: "Tiago",
+  "1 pe": "1 Pedro",
+  "2 pe": "2 Pedro",
+  "1 jo": "1 João",
+  "2 jo": "2 João",
+  "3 jo": "3 João",
+  ap: "Apocalipse",
+};
+
+export function normalizeBookToken(raw: string): string | null {
+  const token = raw.trim().toLowerCase().replace(/\.$/, "");
+  // permitir formatos como "1Jo", "1 Jo"
+  const m = token.match(/^(\d)\s*([a-zçáéíóúâêôãõü]+)$/i);
+  if (m) {
+    const key = `${m[1]} ${m[2]}`.toLowerCase();
+    return BOOK_ABBREVIATIONS[key] ?? null;
+  }
+  return BOOK_ABBREVIATIONS[token] ?? null;
+}

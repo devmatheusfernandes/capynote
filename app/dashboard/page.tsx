@@ -11,11 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileText, CheckSquare, User } from "lucide-react";
+import { FileText, CheckSquare, User, Book } from "lucide-react";
 import { DesktopCreateButton } from "@/components/create-button";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc } from "firebase/firestore";
 import { NoteData, FolderData } from "@/types";
 
 // Tipo local para tarefas, alinhado com a página de Tarefas
@@ -118,6 +118,7 @@ export default function DashboardPage() {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [folders, setFolders] = useState<FolderData[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [showBibleOnDashboard, setShowBibleOnDashboard] = useState<boolean>(true);
 
   // Assinar notas do usuário
   useEffect(() => {
@@ -189,6 +190,19 @@ export default function DashboardPage() {
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
       setTasks(sorted);
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  // Assinar configuração de exibir Bíblia no dashboard
+  useEffect(() => {
+    if (!user?.id) return;
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    const unsub = onSnapshot(settingsRef, (snap) => {
+      const data = snap.data() as { showBibleOnDashboard?: boolean } | undefined;
+      if (typeof data?.showBibleOnDashboard === "boolean") {
+        setShowBibleOnDashboard(data.showBibleOnDashboard);
+      }
     });
     return () => unsub();
   }, [user?.id]);
@@ -369,6 +383,32 @@ export default function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {showBibleOnDashboard && (
+          <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Book className="h-5 w-5 text-blue-600" />
+                Bíblia
+              </CardTitle>
+              <CardDescription>Acesse livros, capítulos e busca</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-muted-foreground">
+                  Explore textos e faça buscas por palavras.
+                </div>
+              </div>
+              <Button
+                className="w-full mt-4"
+                variant="outline"
+                onClick={() => router.push("/dashboard/biblia")}
+              >
+                Abrir Bíblia
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

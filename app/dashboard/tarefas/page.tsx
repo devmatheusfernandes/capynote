@@ -34,7 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { collection, doc, setDoc } from "firebase/firestore";
 
 // Import types
-import { TaskData, ViewType, RecurringTaskToDelete } from "@/types/tasks";
+import { TaskData, ViewType } from "@/types/tasks";
 
 // Import hooks
 import { useTasks } from "@/hooks/use-tasks";
@@ -61,17 +61,12 @@ export default function TarefasPage() {
   const [viewingTask, setViewingTask] = useState<TaskData | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [recurringDeleteDialogOpen, setRecurringDeleteDialogOpen] =
-    useState(false);
-  const [recurringTaskToDelete, setRecurringTaskToDelete] =
-    useState<RecurringTaskToDelete | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>("list");
   const [draggedTask, setDraggedTask] = useState<TaskData | null>(null);
 
   // Custom hooks
   const {
     tasks,
-    taskPendingById,
     completedOccurrences,
     handleDeleteTask,
     updateTaskStatus,
@@ -224,7 +219,7 @@ export default function TarefasPage() {
             ...task,
             dueDate: targetDateString,
             updatedAt: new Date().toISOString(),
-          }).filter(([_, value]) => value !== undefined)
+          }).filter(([value]) => value !== undefined)
         );
 
         setDoc(taskRef, taskUpdate, { merge: true });
