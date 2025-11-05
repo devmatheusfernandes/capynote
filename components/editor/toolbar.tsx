@@ -218,7 +218,9 @@ const createButtonsList = (
                   borderRadius: 2,
                   marginRight: 8,
                   backgroundColor: c.value || "transparent",
-                  border: c.value ? "1px solid rgba(0,0,0,0.2)" : "1px dashed rgba(0,0,0,0.3)",
+                  border: c.value
+                    ? "1px solid rgba(0,0,0,0.2)"
+                    : "1px dashed rgba(0,0,0,0.3)",
                 }}
               />
               {c.label}
@@ -597,7 +599,12 @@ export default function Toolbar({
             const style = node.getStyle() || "";
             const hasBg = /background-color\s*:\s*[^;]+/i.test(style);
             if (hasBg) anyHighlighted = true;
-            if (!new RegExp(`background-color\\s*:\\s*${HIGHLIGHT_COLOR}`, "i").test(style)) {
+            if (
+              !new RegExp(
+                `background-color\\s*:\\s*${HIGHLIGHT_COLOR}`,
+                "i"
+              ).test(style)
+            ) {
               allHighlightedWithTarget = false;
             }
           }
@@ -608,7 +615,10 @@ export default function Toolbar({
           $patchStyleText(selection, { "background-color": "", color: "" });
         } else {
           // Aplica/atualiza para a cor padrão de destaque
-          $patchStyleText(selection, { "background-color": HIGHLIGHT_COLOR, color: "#000000" });
+          $patchStyleText(selection, {
+            "background-color": HIGHLIGHT_COLOR,
+            color: "#000000",
+          });
         }
       }
     });
