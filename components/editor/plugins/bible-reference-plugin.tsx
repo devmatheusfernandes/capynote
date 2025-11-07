@@ -9,8 +9,12 @@ type MatcherResult = {
 };
 
 function getBibleMatch(text: string): MatcherResult | null {
+  // Combina:
+  //  - Livro (com ou sem número, aceita abreviações e ponto)
+  //  - Capítulo
+  //  - Versos opcionais: "x", "x-y", "x, y", "x, y-z" ou "do x - y"
   const m =
-    /\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+):(\d+)\b/.exec(
+    /\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?:(?::\s*([0-9,\s\-]+))|\s+(?:do|dos)\s+([0-9\s\-]+))?/i.exec(
       text
     );
   if (!m) return null;
@@ -20,7 +24,6 @@ function getBibleMatch(text: string): MatcherResult | null {
     length: full.length,
     text: full,
     url: "#", // usamos '#' e interceptamos o clique
-    // `attributes` não é suportado diretamente; usaremos o texto para parsing
   };
 }
 
