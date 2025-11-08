@@ -11,6 +11,7 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import BibleReferenceAutoLink from "./plugins/bible-reference-plugin";
 import BibleReferenceHandler from "./bible-reference-handler";
+import BibleTextsCollectorPlugin from "./plugins/bible-texts-collector-plugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 
@@ -166,6 +167,7 @@ export default function NoteEditor({
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <TabIndentationPlugin />
           <ObsidianPlugin />
+          <BibleTextsCollectorPlugin />
           <MyOnChangePlugin onChange={onChange} />
           <BibleReferenceHandler />
         </div>

@@ -8,8 +8,8 @@ type Props = {
 }
 
 type EditorSidebarContextValue = {
-  activeTab: "texto" | "comentarios"
-  setActiveTab: (tab: "texto" | "comentarios") => void
+  activeTab: "texto" | "todos" | "comentarios"
+  setActiveTab: (tab: "texto" | "todos" | "comentarios") => void
   bibleTitle: string | null
   bibleText: string | null
   bibleLoading: boolean
@@ -18,6 +18,9 @@ type EditorSidebarContextValue = {
   finishBiblePanel: (text: string) => void
   errorBiblePanel: (message: string) => void
   clearBiblePanel: () => void
+  allBibleTexts: { key: string; title: string; content: string }[]
+  setAllBibleTexts: (items: { key: string; title: string; content: string }[]) => void
+  focusTextByKey: (key: string) => void
 }
 
 const EditorSidebarContext = React.createContext<EditorSidebarContextValue | null>(null)
@@ -29,11 +32,12 @@ export function useEditorSidebar() {
 }
 
 export default function SidebarEditorProvider({ children }: Props) {
-  const [activeTab, setActiveTab] = React.useState<"texto" | "comentarios">("texto")
+  const [activeTab, setActiveTab] = React.useState<"texto" | "todos" | "comentarios">("texto")
   const [bibleTitle, setBibleTitle] = React.useState<string | null>(null)
   const [bibleText, setBibleText] = React.useState<string | null>(null)
   const [bibleLoading, setBibleLoading] = React.useState<boolean>(false)
   const [bibleError, setBibleError] = React.useState<string | null>(null)
+  const [allBibleTexts, setAllBibleTexts] = React.useState<{ key: string; title: string; content: string }[]>([])
 
   const beginBiblePanel = React.useCallback((title: string) => {
     setActiveTab("texto")
@@ -60,6 +64,11 @@ export default function SidebarEditorProvider({ children }: Props) {
     setBibleLoading(false)
   }, [])
 
+  const focusTextByKey = React.useCallback((key: string) => {
+    const evt = new CustomEvent("editor-focus-node", { detail: { key } })
+    window.dispatchEvent(evt)
+  }, [])
+
   const value: EditorSidebarContextValue = React.useMemo(
     () => ({
       activeTab,
@@ -72,8 +81,11 @@ export default function SidebarEditorProvider({ children }: Props) {
       finishBiblePanel,
       errorBiblePanel,
       clearBiblePanel,
+      allBibleTexts,
+      setAllBibleTexts,
+      focusTextByKey,
     }),
-    [activeTab, bibleTitle, bibleText, bibleLoading, bibleError, beginBiblePanel, finishBiblePanel, errorBiblePanel]
+    [activeTab, bibleTitle, bibleText, bibleLoading, bibleError, beginBiblePanel, finishBiblePanel, errorBiblePanel, allBibleTexts]
   )
 
   return (

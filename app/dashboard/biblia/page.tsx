@@ -18,6 +18,7 @@ type ChapterContent = { verse: number; text: string }[];
 export default function BibliaPage() {
   const params = useSearchParams();
   const router = useRouter();
+  const verseParam = params.get("verse");
   const [books, setBooks] = useState<string[]>([]);
   const [book, setBook] = useState<string>(params.get("book") || "");
   const [chapters, setChapters] = useState<number[]>([]);
@@ -102,6 +103,7 @@ export default function BibliaPage() {
     const q = new URLSearchParams();
     if (book) q.set("book", book);
     if (chapter) q.set("chapter", String(chapter));
+    if (verseParam) q.set("verse", verseParam);
     router.replace(`/dashboard/biblia?${q.toString()}`);
   }, [book, chapter, router]);
 
@@ -138,6 +140,17 @@ export default function BibliaPage() {
     // Remove highlight after 3 seconds
     setTimeout(() => setHighlightedVerse(null), 3000);
   }
+
+  // Highlight verse from URL when arriving via deep-link
+  useEffect(() => {
+    if (!verseParam) return;
+    const n = Number(verseParam);
+    if (Number.isNaN(n)) return;
+    if (content.length === 0) return; // wait until chapter content loads
+    setHighlightedVerse(n);
+    const t = setTimeout(() => setHighlightedVerse(null), 3000);
+    return () => clearTimeout(t);
+  }, [verseParam, content]);
 
   function clearSearch() {
     setQuery("");

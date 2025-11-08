@@ -35,6 +35,7 @@ import Toolbar from "./toolbar";
 import "./note-editor.css";
 import React, { useEffect, useState } from "react";
 import BibleReferenceHandler from "./bible-reference-handler";
+import BibleTextsCollectorPlugin from "./plugins/bible-texts-collector-plugin";
 import {
   Drawer,
   DrawerContent,
@@ -328,6 +329,7 @@ export default function NoteEditorWithToolbar({
             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
             <TabIndentationPlugin />
           <ObsidianPlugin />
+          <BibleTextsCollectorPlugin />
           <WikilinkEditDrawerPlugin />
           <MyOnChangePlugin onChange={(s) => onChange?.(s)} />
           <InitialValuePlugin initialValue={initialValue} />
