@@ -16,12 +16,21 @@ import {
 } from "@/components/ui/sidebar"
 import { useEditorSidebar } from "./sidebar-editor-provider"
 import { Spinner } from "@/components/ui/spinner"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MoreVertical } from "lucide-react"
 
 export default function SidebarEditor() {
   const router = useRouter()
+  const [newCommentText, setNewCommentText] = React.useState("")
+  const [editingId, setEditingId] = React.useState<string | null>(null)
+  const [editText, setEditText] = React.useState("")
   const {
     activeTab,
     setActiveTab,
+    activeCommentId,
     bibleTitle,
     bibleText,
     bibleLoading,
@@ -29,6 +38,12 @@ export default function SidebarEditor() {
     clearBiblePanel,
     allBibleTexts,
     focusTextByKey,
+    comments,
+    deleteComment,
+    commentDraft,
+    clearCommentDraft,
+    addComment,
+    updateComment,
   } = useEditorSidebar()
 
   function navigateToBibleReference() {
@@ -86,6 +101,11 @@ export default function SidebarEditor() {
                   onClick={() => setActiveTab("comentarios")}
                 >
                   <span>Comentários</span>
+                  {comments.length > 0 && (
+                    <Badge variant="outline" className="ml-2">
+                      {comments.length}
+                    </Badge>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -155,7 +175,133 @@ export default function SidebarEditor() {
               )}
             </div>
           ) : (
-            <div>Comentários</div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Comentários</span>
+              </div>
+              {commentDraft && (
+                <div className="rounded-md border p-2 space-y-2">
+                  <div className="text-xs text-muted-foreground italic">
+                    Seleção: {commentDraft.excerpt || "(vazia)"}
+                  </div>
+                  <Textarea
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    placeholder="Escreva seu comentário"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const text = (newCommentText || "").trim()
+                        addComment({
+                          anchorKey: commentDraft.anchorKey,
+                          anchorOffset: commentDraft.anchorOffset,
+                          focusKey: commentDraft.focusKey,
+                          focusOffset: commentDraft.focusOffset,
+                          excerpt: commentDraft.excerpt,
+                          text: text || "(sem texto)",
+                        })
+                        setNewCommentText("")
+                        clearCommentDraft()
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setNewCommentText("")
+                        clearCommentDraft()
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {comments.length === 0 ? (
+                <div className="text-muted-foreground">Nenhum comentário nesta nota.</div>
+              ) : (
+                <div className="max-h-[50vh] overflow-auto pr-2 space-y-3">
+                  {comments.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`rounded-md border p-2 relative ${
+                        activeCommentId === c.id ? "ring-2 ring-primary" : ""
+                      }`}
+                    >
+                      <div className="absolute right-2 top-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingId(c.id)
+                                setEditText(c.text)
+                              }}
+                            >
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteComment(c.id)}>
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div
+                        className="w-full text-left cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (editingId !== c.id) {
+                            focusTextByKey(c.anchorKey)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if ((e.key === "Enter" || e.key === " ") && editingId !== c.id) {
+                            e.preventDefault()
+                            focusTextByKey(c.anchorKey)
+                          }
+                        }}
+                        title={c.excerpt}
+                      >
+                        <div className="text-xs text-muted-foreground mb-1 italic line-clamp-2">{c.excerpt}</div>
+                        {editingId === c.id ? (
+                          <div className="space-y-2">
+                            <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const txt = (editText || "").trim()
+                                  updateComment(c.id, txt || "(sem texto)")
+                                  setEditingId(null)
+                                  setEditText("")
+                                }}
+                              >
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditText("") }}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm whitespace-pre-wrap leading-relaxed">{c.text}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </SidebarContent>

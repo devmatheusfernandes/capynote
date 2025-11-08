@@ -57,6 +57,7 @@ import {
   SquareTerminal,
   Highlighter,
   Palette,
+  MessageSquarePlus,
 } from "lucide-react";
 
 export { HorizontalRuleNode };
@@ -84,6 +85,7 @@ type ToolbarActions = {
   onToggleReadMode: () => void;
   toggleHighlight: () => void;
   setTextColor: (color: string) => void;
+  insertComment: () => void;
 };
 
 // O componente que representa cada botão
@@ -177,6 +179,21 @@ const createButtonsList = (
         title="Código inline"
       >
         <Code className="h-4 w-4" />
+      </Button>
+    ),
+  },
+  {
+    id: 18,
+    component: (
+      <Button
+        key="comment"
+        variant="ghost"
+        size="sm"
+        onClick={actions.insertComment}
+        className="toolbar-button"
+        title="Adicionar comentário"
+      >
+        <MessageSquarePlus className="h-4 w-4" />
       </Button>
     ),
   },
@@ -636,6 +653,10 @@ export default function Toolbar({
       }
     });
   };
+  const insertComment = () => {
+    // Abre o modal de comentários via evento global
+    window.dispatchEvent(new Event("editor-open-comment-dialog"));
+  };
   // --- Fim das Funções de Ação Lexical ---
 
   // Objeto de ações para ser passado para createButtonsList
@@ -652,6 +673,7 @@ export default function Toolbar({
     onToggleReadMode: onToggleReadMode || (() => {}),
     toggleHighlight,
     setTextColor,
+    insertComment,
   };
 
   // A lista de botões é re-criada AQUI para refletir os estados is* atuais

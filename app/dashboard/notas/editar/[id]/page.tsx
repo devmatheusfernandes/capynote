@@ -322,7 +322,7 @@ export default function EditNotePage() {
   }
 
   return (
-    <SidebarEditorProvider>
+    <SidebarEditorProvider noteId={noteId}>
       {/* Right-side editor sidebar */}
       <SidebarEditor />
       <div className="min-h-screen md:h-screen md:flex md:flex-col">
