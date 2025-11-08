@@ -36,6 +36,15 @@ export default function BibliaPage() {
   const [error, setError] = useState<string | null>(null);
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  function scrollVerseIntoView(n: number) {
+    const el = document.querySelector(`[data-verse="${n}"]`) as HTMLElement | null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const offset = 96; // keep verse near the top under sticky header
+    const y = rect.top + window.scrollY - offset;
+    window.scrollTo({ top: y, behavior: "smooth" });
+  }
 
   // Load books
   useEffect(() => {
@@ -139,6 +148,8 @@ export default function BibliaPage() {
 
     // Remove highlight after 3 seconds
     setTimeout(() => setHighlightedVerse(null), 3000);
+    // Scroll to selected verse so it appears on top
+    requestAnimationFrame(() => scrollVerseIntoView(r.verse));
   }
 
   // Highlight verse from URL when arriving via deep-link
@@ -148,6 +159,8 @@ export default function BibliaPage() {
     if (Number.isNaN(n)) return;
     if (content.length === 0) return; // wait until chapter content loads
     setHighlightedVerse(n);
+    // Scroll so the verse is visible at the top region
+    requestAnimationFrame(() => scrollVerseIntoView(n));
     const t = setTimeout(() => setHighlightedVerse(null), 3000);
     return () => clearTimeout(t);
   }, [verseParam, content]);
@@ -420,6 +433,7 @@ export default function BibliaPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.02 }}
+                    data-verse={v.verse}
                     className={`flex gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-all touch-manipulation ${
                       highlightedVerse === v.verse
                         ? "bg-yellow-100 dark:bg-yellow-900/20 shadow-md scale-[1.02]"
