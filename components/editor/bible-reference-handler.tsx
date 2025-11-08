@@ -25,9 +25,9 @@ type VerseInfo = {
 };
 
 function parseReference(text: string): VerseInfo | null {
-  // Suporta: "Livro 1:2", "Livro 1:2-5", "Livro 1:2, 4-6", "Livro 1 do 1 - 5"
+  // Apenas referências dentro de parênteses: "(Livro 1:2)", etc.
   const m = text.match(
-    /\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?:(?::\s*([0-9,\s\-]+))|\s+(?:do|dos)\s+([0-9\s\-]+))?/i
+    /\(\s*((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?::\s*([0-9,\s\-]+)|\s+(?:do|dos)\s+([0-9\s\-]+))?\s*\)/i
   );
   if (!m) return null;
   const rawBook = m[1];
@@ -65,37 +65,44 @@ function parseReference(text: string): VerseInfo | null {
 
 function parseAllReferences(text: string): VerseInfo[] {
   const refs: VerseInfo[] = [];
-  const pattern = /\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?::\s*([0-9,\s\-]+)|\s+(?:do|dos)\s+([0-9\s\-]+))?/gi;
-  let m: RegExpExecArray | null;
-  while ((m = pattern.exec(text)) !== null) {
-    const rawBook = m[1];
-    const chapter = Number(m[2]);
-    const versesRaw = (m[3] ?? m[4] ?? "").trim();
-    const normalized = normalizeBookToken(rawBook) ?? rawBook.trim().replace(/\.$/, "");
-    if (!normalized) continue;
-    if (!versesRaw) {
-      refs.push({ book: normalized, chapter });
-      continue;
-    }
-    const verses: number[] = [];
-    for (const part of versesRaw.split(/\s*,\s*/)) {
-      const p = part.trim();
-      if (!p) continue;
-      const range = p.match(/^(\d+)\s*-\s*(\d+)$/);
-      if (range) {
-        const start = Number(range[1]);
-        const end = Number(range[2]);
-        const [s, e] = start <= end ? [start, end] : [end, start];
-        for (let v = s; v <= e; v++) verses.push(v);
-      } else {
-        const n = Number(p);
-        if (!Number.isNaN(n)) verses.push(n);
+  // Captura cada grupo entre parênteses
+  const groupPattern = /\(([^)]+)\)/g;
+  let gm: RegExpExecArray | null;
+  while ((gm = groupPattern.exec(text)) !== null) {
+    const inner = gm[1];
+    const chunks = inner.split(/\s*;\s*/).filter(Boolean);
+    for (const chunk of chunks) {
+      const m = chunk.match(/\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?::\s*([0-9,\s\-]+)|\s+(?:do|dos)\s+([0-9\s\-]+))?/i);
+      if (!m) continue;
+      const rawBook = m[1];
+      const chapter = Number(m[2]);
+      const versesRaw = (m[3] ?? m[4] ?? "").trim();
+      const normalized = normalizeBookToken(rawBook) ?? rawBook.trim().replace(/\.$/, "");
+      if (!normalized) continue;
+      if (!versesRaw) {
+        refs.push({ book: normalized, chapter });
+        continue;
       }
-    }
-    if (verses.length === 1) {
-      refs.push({ book: normalized, chapter, verse: verses[0] });
-    } else {
-      refs.push({ book: normalized, chapter, verses });
+      const verses: number[] = [];
+      for (const part of versesRaw.split(/\s*,\s*/)) {
+        const p = part.trim();
+        if (!p) continue;
+        const range = p.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (range) {
+          const start = Number(range[1]);
+          const end = Number(range[2]);
+          const [s, e] = start <= end ? [start, end] : [end, start];
+          for (let v = s; v <= e; v++) verses.push(v);
+        } else {
+          const n = Number(p);
+          if (!Number.isNaN(n)) verses.push(n);
+        }
+      }
+      if (verses.length === 1) {
+        refs.push({ book: normalized, chapter, verse: verses[0] });
+      } else {
+        refs.push({ book: normalized, chapter, verses });
+      }
     }
   }
   return refs;
@@ -126,14 +133,15 @@ export default function BibleReferenceHandler() {
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const anchor = target.closest("a");
-      const block = target.closest<HTMLElement>(
-        ".editor-paragraph, p, li, div, span"
-      ) ?? anchor ?? target;
-      const raw = block.textContent || "";
+      if (!anchor) return; // só reage a cliques em links
+      // Apenas links bíblicos (marcados pelo autolink com href começando em #bible)
+      const href = (anchor as HTMLAnchorElement).getAttribute("href") || "";
+      if (!href.startsWith("#bible")) return;
+      const raw = anchor.textContent || "";
       const text = raw.replace(/\u00A0/g, " "); // normaliza NBSP
       const infos = parseAllReferences(text);
       if (infos.length === 0) return; // não é referência bíblica, segue o fluxo normal
-      if (anchor) e.preventDefault();
+      e.preventDefault();
       // Fechar teclado mobile, se aberto
       const active = document.activeElement as HTMLElement | null;
       active?.blur?.();

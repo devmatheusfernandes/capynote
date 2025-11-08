@@ -211,6 +211,14 @@
   border-bottom-color: hsl(var(--primary));
 }
 
+/* Bible links (autolink com href começando em #bible) */
+.editor-inner a[href^="#bible"] {
+  color: #6d28d9; /* roxo */
+}
+.editor-inner a[href^="#bible"]:hover {
+  border-bottom-color: #6d28d9;
+}
+
 /* Quotes */
 .editor-quote {
   padding-left: 16px;
