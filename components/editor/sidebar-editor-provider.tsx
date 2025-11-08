@@ -62,9 +62,18 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
     if (!user?.id || !noteId) return
     const commentsRef = collection(db, "users", user.id, "notes", noteId, "comments")
     const unsub = onSnapshot(commentsRef, (snapshot) => {
+      type CommentDoc = {
+        anchorKey: string
+        anchorOffset?: number
+        focusKey: string
+        focusOffset?: number
+        excerpt?: string
+        text?: string
+        createdAt?: number
+      }
       const items = snapshot.docs
         .map((d) => {
-          const data = d.data() as any
+          const data = d.data() as CommentDoc
           return {
             id: d.id,
             anchorKey: data.anchorKey,
@@ -206,9 +215,14 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
       beginBiblePanel,
       finishBiblePanel,
       errorBiblePanel,
+      clearBiblePanel,
       allBibleTexts,
+      focusTextByKey,
       comments,
+      addComment,
       updateComment,
+      deleteComment,
+      clearComments,
       commentDraft,
       beginCommentDraft,
       clearCommentDraft,
