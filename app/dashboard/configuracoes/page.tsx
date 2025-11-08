@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,9 +62,15 @@ import {
 } from "firebase/firestore";
 import { TagData } from "@/types";
 import { toast } from "sonner";
+import { BOOK_ABBREVIATIONS } from "@/lib/bible-abbreviations-pt";
 
 export default function ConfiguracoesPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"geral" | "biblia">("geral");
+  const [books, setBooks] = useState<string[]>([]);
+  const [customAbbrevs, setCustomAbbrevs] = useState<Record<string, string>>({});
+  const [newAbbrev, setNewAbbrev] = useState<string>("");
+  const [newBook, setNewBook] = useState<string>("");
   const [availableTags, setAvailableTags] = useState<TagData[]>([]);
   const [defaultTaskTime, setDefaultTaskTime] = useState<string>("09:00");
   const [notificationsEnabled, setNotificationsEnabled] =
@@ -105,6 +112,52 @@ export default function ConfiguracoesPage() {
 
     return () => unsubscribe();
   }, [user?.id]);
+
+  // Assinar abreviações personalizadas e carregar livros quando a aba Bíblia estiver ativa
+  useEffect(() => {
+    if (activeTab !== "biblia") return;
+    const userId = user?.id;
+    (async () => {
+      try {
+        const res = await fetch("/api/bible");
+        const data = await res.json();
+        setBooks(data.books || []);
+      } catch {
+        // nada
+      }
+    })();
+    if (!userId) return;
+    const settingsRef = doc(db, "users", userId, "meta", "settings");
+    const unsub = onSnapshot(settingsRef, (snap) => {
+      const data = snap.data() as { customAbbreviations?: Record<string, string> } | undefined;
+      setCustomAbbrevs(data?.customAbbreviations || {});
+    });
+    return () => unsub();
+  }, [activeTab, user?.id]);
+
+  const addCustomAbbrev = async () => {
+    if (!user?.id) return;
+    const key = newAbbrev.trim().toLowerCase().replace(/\.$/, "");
+    const value = newBook.trim();
+    if (!key || !value) return toast.error("Informe abreviação e selecione um livro");
+    if (BOOK_ABBREVIATIONS[key]) return toast.error("Essa abreviação já existe (padrão)");
+    if (customAbbrevs[key]) return toast.error("Essa abreviação já existe (personalizada)");
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    const next = { ...customAbbrevs, [key]: value };
+    await setDoc(settingsRef, { customAbbreviations: next, updatedAt: new Date().toISOString() }, { merge: true });
+    setNewAbbrev("");
+    setNewBook("");
+    toast.success("Abreviação adicionada");
+  };
+
+  const removeCustomAbbrev = async (key: string) => {
+    if (!user?.id) return;
+    const next = { ...customAbbrevs };
+    delete next[key];
+    const settingsRef = doc(db, "users", user.id, "meta", "settings");
+    await setDoc(settingsRef, { customAbbreviations: next, updatedAt: new Date().toISOString() }, { merge: true });
+    toast.success("Abreviação removida");
+  };
 
   // Ler configurações do usuário (horário padrão e notificações)
   useEffect(() => {
@@ -443,6 +496,24 @@ export default function ConfiguracoesPage() {
 
       <Separator />
 
+      <div className="mb-4">
+        <ButtonGroup>
+          <Button
+            variant={activeTab === "geral" ? "default" : "outline"}
+            onClick={() => setActiveTab("geral")}
+          >
+            Geral
+          </Button>
+          <ButtonGroupSeparator />
+          <Button
+            variant={activeTab === "biblia" ? "default" : "outline"}
+            onClick={() => setActiveTab("biblia")}
+          >
+            Bíblia
+          </Button>
+        </ButtonGroup>
+      </div>
+      {activeTab === "geral" && (
       <div className="grid gap-4 sm:gap-6">
         <Card>
           <CardHeader>
@@ -714,6 +785,112 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
       </div>
+      )}
+
+      {activeTab === "biblia" && (
+        <div className="grid gap-4 sm:gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferências da Bíblia</CardTitle>
+              <CardDescription>
+                Ajuste recursos e comportamentos relacionados à leitura bíblica.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">Mostrar Bíblia no Dashboard</label>
+                  <p className="text-sm text-muted-foreground">
+                    Exibe um card de acesso rápido à Bíblia na página inicial.
+                  </p>
+                </div>
+                <Checkbox
+                  checked={showBibleOnDashboard}
+                  onCheckedChange={(v) => toggleShowBibleOnDashboard(Boolean(v))}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Abreviações de Livros</CardTitle>
+              <CardDescription>
+                Visualize e personalize abreviações usadas ao reconhecer referências.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Abreviações padrão</label>
+                <p className="text-sm text-muted-foreground">
+                  Estas abreviações já são reconhecidas automaticamente.
+                </p>
+                <div className="max-h-52 overflow-auto border rounded-md p-3 text-sm">
+                  {Object.entries(BOOK_ABBREVIATIONS)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .map(([abbr, book]) => (
+                      <div key={abbr} className="flex items-center justify-between py-1">
+                        <span className="font-mono">{abbr}</span>
+                        <span className="text-muted-foreground">{book}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Abreviações personalizadas</label>
+                <p className="text-sm text-muted-foreground">
+                  Adicione abreviações específicas e associe a um livro.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      placeholder="Ex.: sal. (abreviação)"
+                      value={newAbbrev}
+                      onChange={(e) => setNewAbbrev(e.target.value)}
+                      className="sm:max-w-[200px]"
+                    />
+                    <Select value={newBook} onValueChange={setNewBook}>
+                      <SelectTrigger className="sm:max-w-[260px]">
+                        <SelectValue placeholder="Selecione o livro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {books.map((b) => (
+                          <SelectItem key={b} value={b}>
+                            {b}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={addCustomAbbrev}>Adicionar</Button>
+                  </div>
+                  <div className="max-h-52 overflow-auto border rounded-md p-3 text-sm">
+                    {Object.keys(customAbbrevs).length === 0 ? (
+                      <p className="text-muted-foreground">Nenhuma abreviação personalizada</p>
+                    ) : (
+                      Object.entries(customAbbrevs)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .map(([abbr, book]) => (
+                          <div key={abbr} className="flex items-center justify-between py-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono">{abbr}</span>
+                              <span className="text-muted-foreground">{book}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => removeCustomAbbrev(abbr)}>
+                              Remover
+                            </Button>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <input
         ref={restoreFileInputRef}
         type="file"

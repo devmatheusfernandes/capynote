@@ -92,13 +92,20 @@ export const BOOK_ABBREVIATIONS: Record<string, string> = {
   ap: "Apocalipse",
 };
 
+// Abreviações personalizadas injetadas em tempo de execução (por usuário)
+let CUSTOM_ABBREVIATIONS: Record<string, string> = {};
+
+export function setCustomAbbreviations(map: Record<string, string>) {
+  CUSTOM_ABBREVIATIONS = { ...map };
+}
+
 export function normalizeBookToken(raw: string): string | null {
   const token = raw.trim().toLowerCase().replace(/\.$/, "");
   // permitir formatos como "1Jo", "1 Jo"
   const m = token.match(/^(\d)\s*([a-zçáéíóúâêôãõü]+)$/i);
   if (m) {
     const key = `${m[1]} ${m[2]}`.toLowerCase();
-    return BOOK_ABBREVIATIONS[key] ?? null;
+    return CUSTOM_ABBREVIATIONS[key] ?? BOOK_ABBREVIATIONS[key] ?? null;
   }
-  return BOOK_ABBREVIATIONS[token] ?? null;
+  return CUSTOM_ABBREVIATIONS[token] ?? BOOK_ABBREVIATIONS[token] ?? null;
 }

@@ -49,6 +49,14 @@ export default function BibliaPage() {
     })();
   }, []);
 
+  // Default to Gênesis 1 when no params are provided
+  useEffect(() => {
+    if (!book && books.length > 0) {
+      setBook(books[0]);
+      setChapter(1);
+    }
+  }, [books]);
+
   // When book changes, load chapters
   useEffect(() => {
     if (!book) return;
@@ -57,6 +65,10 @@ export default function BibliaPage() {
         const res = await fetch(`/api/bible?book=${encodeURIComponent(book)}`);
         const data = await res.json();
         if (data.chapters) setChapters(data.chapters);
+        // If no chapter was specified (e.g., only book in URL), default to 1
+        if (chapter === null) {
+          setChapter(1);
+        }
         setError(null);
       } catch {
         setError("Falha ao carregar capítulos");
@@ -226,7 +238,13 @@ export default function BibliaPage() {
             {/* Book Selector */}
             <div className="col-span-8 lg:col-span-4 min-w-0">
               <label className="text-sm font-medium mb-2 block">Livro</label>
-              <Select value={book} onValueChange={setBook}>
+              <Select
+                value={book}
+                onValueChange={(value) => {
+                  setBook(value);
+                  setChapter(1);
+                }}
+              >
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Selecione um livro" />
                 </SelectTrigger>

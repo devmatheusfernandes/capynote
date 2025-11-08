@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { normalizeBookToken } from "@/lib/bible-abbreviations-pt";
+import { normalizeBookToken, setCustomAbbreviations } from "@/lib/bible-abbreviations-pt";
+import { useAuth } from "@/contexts/auth-context";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 import {
   Drawer,
   DrawerContent,
@@ -60,12 +63,63 @@ function parseReference(text: string): VerseInfo | null {
   return { book: normalized, chapter, verses };
 }
 
+function parseAllReferences(text: string): VerseInfo[] {
+  const refs: VerseInfo[] = [];
+  const pattern = /\b((?:[1-3]\s*)?[A-Za-zçÇáÁéÉíÍóÓúÚâÂêÊôÔãÃõÕüÜ\.]+)\s+(\d+)(?::\s*([0-9,\s\-]+)|\s+(?:do|dos)\s+([0-9\s\-]+))?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(text)) !== null) {
+    const rawBook = m[1];
+    const chapter = Number(m[2]);
+    const versesRaw = (m[3] ?? m[4] ?? "").trim();
+    const normalized = normalizeBookToken(rawBook) ?? rawBook.trim().replace(/\.$/, "");
+    if (!normalized) continue;
+    if (!versesRaw) {
+      refs.push({ book: normalized, chapter });
+      continue;
+    }
+    const verses: number[] = [];
+    for (const part of versesRaw.split(/\s*,\s*/)) {
+      const p = part.trim();
+      if (!p) continue;
+      const range = p.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (range) {
+        const start = Number(range[1]);
+        const end = Number(range[2]);
+        const [s, e] = start <= end ? [start, end] : [end, start];
+        for (let v = s; v <= e; v++) verses.push(v);
+      } else {
+        const n = Number(p);
+        if (!Number.isNaN(n)) verses.push(n);
+      }
+    }
+    if (verses.length === 1) {
+      refs.push({ book: normalized, chapter, verse: verses[0] });
+    } else {
+      refs.push({ book: normalized, chapter, verses });
+    }
+  }
+  return refs;
+}
+
 export default function BibleReferenceHandler() {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<VerseInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Assinar abreviações personalizadas do usuário e injetar no normalizador
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+    const settingsRef = doc(db, "users", userId, "meta", "settings");
+    const unsub = onSnapshot(settingsRef, (snap) => {
+      const data = snap.data() as { customAbbreviations?: Record<string, string> } | undefined;
+      setCustomAbbreviations(data?.customAbbreviations || {});
+    });
+    return () => unsub();
+  }, [user?.id]);
 
   useEffect(() => {
     const handleClick = async (e: MouseEvent) => {
@@ -77,57 +131,70 @@ export default function BibleReferenceHandler() {
       ) ?? anchor ?? target;
       const raw = block.textContent || "";
       const text = raw.replace(/\u00A0/g, " "); // normaliza NBSP
-      const info = parseReference(text);
-      if (!info) return; // não é referência bíblica, segue o fluxo normal
+      const infos = parseAllReferences(text);
+      if (infos.length === 0) return; // não é referência bíblica, segue o fluxo normal
       if (anchor) e.preventDefault();
       // Fechar teclado mobile, se aberto
       const active = document.activeElement as HTMLElement | null;
       active?.blur?.();
       setError(null);
       setLoading(true);
-      setCurrent(info);
+      // Exibir primeira referência no título; conteúdo agregará todas
+      setCurrent(infos[0]);
       setOpen(true);
       try {
-        let displayText = "";
-        if (info.verse && !info.verses) {
-          // Verso único
-          const params = new URLSearchParams({
-            book: info.book,
-            chapter: String(info.chapter),
-            verse: String(info.verse),
-          });
-          const res = await fetch(`/api/bible?${params.toString()}`);
-          if (!res.ok) {
-            const j = await res.json().catch(() => ({}));
-            throw new Error(j?.error || `Erro ${res.status}`);
+        const parts: string[] = [];
+        for (const info of infos) {
+          if (info.verse && !info.verses) {
+            const params = new URLSearchParams({
+              book: info.book,
+              chapter: String(info.chapter),
+              verse: String(info.verse),
+            });
+            const res = await fetch(`/api/bible?${params.toString()}`);
+            if (!res.ok) {
+              const j = await res.json().catch(() => ({}));
+              throw new Error(j?.error || `Erro ${res.status}`);
+            }
+            const data = await res.json();
+            const title = `${info.book} ${info.chapter}:${info.verse}`;
+            parts.push(`${title}\n\n${data.text ?? ""}`);
+          } else {
+            const params = new URLSearchParams({
+              book: info.book,
+              chapter: String(info.chapter),
+            });
+            const res = await fetch(`/api/bible?${params.toString()}`);
+            if (!res.ok) {
+              const j = await res.json().catch(() => ({}));
+              throw new Error(j?.error || `Erro ${res.status}`);
+            }
+            const data = await res.json();
+            const selected = (info.verses ?? []).length > 0 ? info.verses! : data.verses;
+            const byNumber = new Map<number, string>();
+            for (const item of data.content as { verse: number; text: string }[]) {
+              byNumber.set(item.verse, item.text);
+            }
+            const lines: string[] = [];
+            for (const v of selected) {
+              const t = byNumber.get(v);
+              if (t) lines.push(`${v}. ${t}`);
+            }
+            const title = (() => {
+              if (selected.length === 0) return `${info.book} ${info.chapter}`;
+              const sorted = [...selected].sort((a, b) => a - b);
+              const first = sorted[0];
+              const last = sorted[sorted.length - 1];
+              if (sorted.length > 2 && last - first + 1 === sorted.length) {
+                return `${info.book} ${info.chapter}:${first}-${last}`;
+              }
+              return `${info.book} ${info.chapter}:${sorted.join(", ")}`;
+            })();
+            parts.push(`${title}\n\n${lines.join("\n\n")}`);
           }
-          const data = await res.json();
-          displayText = data.text ?? "";
-        } else {
-          // Lista/faixa de versos: buscar capítulo e filtrar
-          const params = new URLSearchParams({
-            book: info.book,
-            chapter: String(info.chapter),
-          });
-          const res = await fetch(`/api/bible?${params.toString()}`);
-          if (!res.ok) {
-            const j = await res.json().catch(() => ({}));
-            throw new Error(j?.error || `Erro ${res.status}`);
-          }
-          const data = await res.json();
-          const selected = (info.verses ?? []).length > 0 ? info.verses! : data.verses;
-          const byNumber = new Map<number, string>();
-          for (const item of data.content as { verse: number; text: string }[]) {
-            byNumber.set(item.verse, item.text);
-          }
-          const lines: string[] = [];
-          for (const v of selected) {
-            const t = byNumber.get(v);
-            if (t) lines.push(`${v}. ${t}`);
-          }
-          displayText = lines.join("\n\n");
         }
-        setCurrent({ ...info, text: displayText });
+        const displayText = parts.join("\n\n—\n\n");
+        setCurrent({ ...infos[0], text: displayText });
       } catch (err: unknown) {
         const message =
           typeof err === "object" && err && "message" in (err as Record<string, unknown>)
