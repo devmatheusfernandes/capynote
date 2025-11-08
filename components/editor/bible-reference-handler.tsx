@@ -1,18 +1,12 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { normalizeBookToken, setCustomAbbreviations } from "@/lib/bible-abbreviations-pt";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Spinner } from "../ui/spinner";
-import Error from "next/error";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useEditorSidebar } from "./sidebar-editor-provider";
 
 type VerseInfo = {
   book: string;
@@ -109,10 +103,8 @@ function parseAllReferences(text: string): VerseInfo[] {
 }
 
 export default function BibleReferenceHandler() {
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState<VerseInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { state, isMobile, openMobile, setOpenMobile, setOpen } = useSidebar();
+  const { beginBiblePanel, finishBiblePanel, errorBiblePanel } = useEditorSidebar();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -145,11 +137,29 @@ export default function BibleReferenceHandler() {
       // Fechar teclado mobile, se aberto
       const active = document.activeElement as HTMLElement | null;
       active?.blur?.();
-      setError(null);
-      setLoading(true);
       // Exibir primeira referência no título; conteúdo agregará todas
-      setCurrent(infos[0]);
-      setOpen(true);
+      const first = infos[0];
+      const title = (() => {
+        const base = `${first.book} ${first.chapter}`;
+        if (first.verse) return `${base}:${first.verse}`;
+        if (first.verses && first.verses.length > 0) {
+          const sorted = [...first.verses].sort((a, b) => a - b);
+          const f = sorted[0];
+          const l = sorted[sorted.length - 1];
+          if (sorted.length > 2 && l - f + 1 === sorted.length) {
+            return `${base}:${f}-${l}`;
+          }
+          return `${base}:${sorted.join(", ")}`;
+        }
+        return base;
+      })();
+      beginBiblePanel(title);
+      // Garantir que a sidebar esteja visível
+      if (isMobile) {
+        if (!openMobile) setOpenMobile(true);
+      } else {
+        if (state !== "expanded") setOpen(true);
+      }
       try {
         const parts: string[] = [];
         for (const info of infos) {
@@ -202,15 +212,15 @@ export default function BibleReferenceHandler() {
           }
         }
         const displayText = parts.join("\n\n—\n\n");
-        setCurrent({ ...infos[0], text: displayText });
+        finishBiblePanel(displayText);
       } catch (err: unknown) {
         const message =
           typeof err === "object" && err && "message" in (err as Record<string, unknown>)
             ? String((err as Record<string, unknown>).message)
             : "Falha ao carregar versículo";
-        setError(message);
+        errorBiblePanel(message);
       } finally {
-        setLoading(false);
+        // loading é controlado pelo contexto
       }
     };
     // captura clicks dentro do editor
@@ -223,50 +233,5 @@ export default function BibleReferenceHandler() {
     return () => container.removeEventListener("click", wrappedListener);
   }, []);
 
-  const title = (() => {
-    if (!current) return "";
-    const base = `${current.book} ${current.chapter}`;
-    if (current.verse) return `${base}:${current.verse}`;
-    if (current.verses && current.verses.length > 0) {
-      const sorted = [...current.verses].sort((a, b) => a - b);
-      // compacta se possível
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
-      if (sorted.length > 2 && last - first + 1 === sorted.length) {
-        return `${base}:${first}-${last}`;
-      }
-      return `${base}:${sorted.join(", ")}`;
-    }
-    return base;
-  })();
-
-  return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle
-            className="cursor-pointer font-semibold"
-            onClick={() => {
-              if (!current) return;
-              const q = new URLSearchParams({
-                book: current.book,
-                chapter: String(current.chapter),
-              });
-              router.push(`/dashboard/biblia?${q.toString()}`);
-              setOpen(false);
-            }}
-          >
-            {title}
-          </DrawerTitle>
-        </DrawerHeader>
-        <div className="flex flex-col items-center justify-center py-4 pb-10 px-4 mb-8">
-          {loading && <Spinner />}
-          {error && <div className="text-red-600">{error}</div>}
-          {!loading && !error && (
-            <div className="whitespace-pre-wrap pb-8">{current?.text}</div>
-          )}
-        </div>
-      </DrawerContent>
-    </Drawer>
-  );
+  return null;
 }

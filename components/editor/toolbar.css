@@ -15,7 +15,8 @@
   /* Implementação de expansão de altura (sem 'subir') */
   max-height: 3rem; 
   overflow: hidden; 
-  transition: max-height 0.3s ease-in-out; 
+  /* Sincroniza com o sidebar (transition-[left,right,width] duration-200 ease-linear) */
+  transition: max-height 0.3s ease-in-out, right 0.2s linear; 
 }
 
 /* Estado expandido - Permite que a altura se ajuste ao conteúdo, mantendo a base. */

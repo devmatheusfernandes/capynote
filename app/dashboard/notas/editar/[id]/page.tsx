@@ -36,6 +36,31 @@ import {
 import { NoteData, TagData } from "@/types";
 import CapybaraLoader from "@/components/capybaraLoader";
 import { Badge } from "@/components/ui/badge";
+import SidebarEditorProvider from "@/components/editor/sidebar-editor-provider";
+import SidebarEditor from "@/components/editor/sidebar-editor";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+
+function HeaderOffset({
+  children,
+  showHeader,
+}: {
+  children: React.ReactNode;
+  showHeader: boolean;
+}) {
+  const { state, isMobile } = useSidebar();
+  const rightOffset = !isMobile && state === "expanded" ? "var(--sidebar-width)" : "0";
+
+  return (
+    <div
+      className={`flex-shrink-0 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 transition-[right,transform] duration-200 ease-linear fixed top-0 left-0 right-0 z-10 ${
+        showHeader ? "translate-y-0" : "-translate-y-full"
+      }`}
+      style={{ right: rightOffset }}
+    >
+      {children}
+    </div>
+  );
+}
 
 type EditorOptionsSheetProps = {
   onSave: () => void;
@@ -297,14 +322,12 @@ export default function EditNotePage() {
   }
 
   return (
-    <>
+    <SidebarEditorProvider>
+      {/* Right-side editor sidebar */}
+      <SidebarEditor />
       <div className="min-h-screen md:h-screen md:flex md:flex-col">
         {/* Header próprio do editor: título + botão para abrir sheet */}
-        <div
-          className={`flex-shrink-0 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 transition-transform duration-300 fixed top-0 left-0 right-0 z-10 ${
-            showHeader ? "translate-y-0" : "-translate-y-full"
-          }`}
-        >
+        <HeaderOffset showHeader={showHeader}>
           <div className="px-4 md:px-6 py-2">
             <div className="flex items-center gap-3">
               <Button
@@ -341,6 +364,8 @@ export default function EditNotePage() {
                   <SaveIcon className="h-4 w-4" />
                 )}
               </Badge>
+              {/* Toggle custom editor sidebar */}
+              <SidebarTrigger aria-label="Abrir sidebar do editor" title="Barra lateral" />
               {openReadMode ? (
                 <Button
                   variant="outline"
@@ -361,7 +386,7 @@ export default function EditNotePage() {
               )}
             </div>
           </div>
-        </div>
+        </HeaderOffset>
 
         {/* Content */}
         <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-12">
@@ -380,6 +405,6 @@ export default function EditNotePage() {
           </div>
         </div>
       </div>
-    </>
+    </SidebarEditorProvider>
   );
 }

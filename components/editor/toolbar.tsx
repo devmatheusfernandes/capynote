@@ -30,6 +30,7 @@ import { useCallback, useEffect, useState, useRef, Fragment } from "react";
 import { $isTextNode } from "lexical";
 import type { CSSProperties, JSX } from "react";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -469,6 +470,8 @@ export default function Toolbar({
 }: {
   onToggleReadMode?: () => void;
 }) {
+  const { state, isMobile } = useSidebar();
+  const sidebarExpanded = !isMobile && state === "expanded";
   const [editor] = useLexicalComposerContext();
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
@@ -769,7 +772,11 @@ export default function Toolbar({
       className={`toolbar-container ${
         hasOverflow && isExpanded ? "expanded" : ""
       }`}
-      style={{ "--kb-offset": `${keyboardOffset}px` } as CSSProperties}
+      style={{
+        "--kb-offset": `${keyboardOffset}px`,
+        // Afasta a toolbar da borda direita quando o sidebar do editor está aberto (desktop)
+        right: sidebarExpanded ? "var(--sidebar-width)" : 0,
+      } as CSSProperties}
     >
       <div ref={contentRef} className="toolbar-content">
         {/* Renderiza botões visíveis ou todos se expandido */}
