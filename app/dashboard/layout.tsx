@@ -12,7 +12,7 @@ export default function DashboardLayout({
   return (
     <ProtectedRoute>
       <DashboardSidebar>
-        <div className="bg-background h-full">{children}</div>
+        <div className="bg-background">{children}</div>
         <MountNotifications />
         <AutoBackup />
         <RouteAwareFloatingCreateButton />

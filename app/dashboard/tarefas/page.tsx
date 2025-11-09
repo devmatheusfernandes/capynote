@@ -260,7 +260,7 @@ export default function TarefasPage() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="container sm:p-6 p-4 sm:max-w-[80vw] max-w-[100vw]">
+      <div className="container sm:p-6 p-4 h-screen max-w-[100vw]">
         <PageHeader
           title="Tarefas"
           otherButton={

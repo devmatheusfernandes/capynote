@@ -38,6 +38,7 @@ import BibleReferenceHandler from "./bible-reference-handler";
 import BibleTextsCollectorPlugin from "./plugins/bible-texts-collector-plugin";
 import CommentsPlugin from "./plugins/comments-plugin";
 import CommentsHighlightsPlugin from "./plugins/comments-highlights-plugin";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   Drawer,
   DrawerContent,
@@ -291,6 +292,8 @@ export default function NoteEditorWithToolbar({
   onOpenReadMode,
 }: NoteEditorWithToolbarProps) {
   // Modo leitura: controlado externamente por openReadMode
+  const { state, isMobile } = useSidebar();
+  const sidebarOpen = !isMobile && state === "expanded";
 
   const initialConfig = {
     namespace: "NoteEditorWithToolbar",
@@ -313,7 +316,7 @@ export default function NoteEditorWithToolbar({
   };
 
   return (
-    <div className={`note-editor-with-toolbar ${className}`}>
+    <div className={`note-editor-with-toolbar ${sidebarOpen ? "sidebar-open" : ""} ${className}`}>
       <LexicalComposer initialConfig={initialConfig}>
         <div className="editor-container">
           <div className="editor-inner">

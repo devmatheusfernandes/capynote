@@ -24,11 +24,11 @@ import {
   HorizontalRuleNode,
 } from "@lexical/react/LexicalHorizontalRuleNode";
 import { $createCodeNode } from "@lexical/code";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link"; // Usando TOGGLE_LINK_COMMAND
+import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 
 import { useCallback, useEffect, useState, useRef, Fragment } from "react";
 import { $isTextNode } from "lexical";
-import type { CSSProperties, JSX } from "react";
+import type { CSSProperties, JSX, ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -41,37 +41,32 @@ import {
   Bold,
   Italic,
   Underline,
-  Code,
+  Code2,
   Heading1,
   Heading2,
   Heading3,
   List,
   ListOrdered,
   Eye,
-  ChevronUp,
+  ChevronsUp,
   Quote,
   Minus,
-  Link,
-  BookOpenText,
+  Link2,
+  FileText,
   Hash,
-  SquareTerminal,
+  Terminal,
   Highlighter,
   Palette,
-  MessageSquarePlus,
+  MessageSquareText,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export { HorizontalRuleNode };
 
-// ===============================================
-// === 🎯 CORREÇÃO 1: Botões fora do componente ===
-// ===============================================
+const BUTTON_WIDTH = 40;
+const EXPAND_BUTTON_WIDTH = 40;
+const BUTTON_GAP = 4;
 
-// Largura de um botão para cálculo de responsividade
-const BUTTON_WIDTH = 40; // Largura aproximada de cada botão
-const EXPAND_BUTTON_WIDTH = 40; // Largura do botão de expandir
-const BUTTON_GAP = 4; // Espaçamento entre botões
-
-// Funções de ação (passadas como props ou definidas globalmente)
 type ToolbarActions = {
   formatText: (format: TextFormatType) => void;
   insertHeading: (headingSize: HeadingTagType) => void;
@@ -88,120 +83,69 @@ type ToolbarActions = {
   insertComment: () => void;
 };
 
-// O componente que representa cada botão
 type ToolbarButtonComponent = {
   id: number;
   component: JSX.Element;
+  category: "format" | "structure" | "insert" | "special";
 };
 
-// Função para criar a lista de botões (passa os estados is* e ações como props)
-const createButtonsList = (
-  isBold: boolean,
-  isItalic: boolean,
-  isUnderline: boolean,
-  isStrikethrough: boolean,
-  isCode: boolean,
-  actions: ToolbarActions
-): ToolbarButtonComponent[] => [
-  {
-    id: 0,
-    component: (
+// Componente de botão animado com Framer Motion
+const AnimatedButton = ({
+  isActive,
+  onClick,
+  title,
+  icon: Icon,
+  variant = "default",
+}: {
+  isActive?: boolean;
+  onClick: () => void;
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+  variant?: "default" | "secondary";
+}) => {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    >
       <Button
-        key="bold"
-        variant={isBold ? "default" : "ghost"}
+        variant={isActive ? "default" : "ghost"}
         size="sm"
-        onClick={() => actions.formatText("bold")}
-        className={`toolbar-button ${isBold ? "active" : ""}`}
-        data-state={isBold ? "on" : "off"}
-        title="Negrito (Ctrl+B)"
+        onClick={onClick}
+        className={`toolbar-button ${isActive ? "active" : ""} ${
+          variant === "secondary" ? "toolbar-button-secondary" : ""
+        }`}
+        data-state={isActive ? "on" : "off"}
+        title={title}
       >
-        <Bold className="h-4 w-4" />
+        <Icon className="h-4 w-4" />
       </Button>
-    ),
-  },
-  {
-    id: 1,
-    component: (
-      <Button
-        key="italic"
-        variant={isItalic ? "default" : "ghost"}
-        size="sm"
-        onClick={() => actions.formatText("italic")}
-        className={`toolbar-button ${isItalic ? "active" : ""}`}
-        data-state={isItalic ? "on" : "off"}
-        title="Itálico (Ctrl+I)"
-      >
-        <Italic className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 2,
-    component: (
-      <Button
-        key="underline"
-        variant={isUnderline ? "default" : "ghost"}
-        size="sm"
-        onClick={() => actions.formatText("underline")}
-        className={`toolbar-button ${isUnderline ? "active" : ""}`}
-        data-state={isUnderline ? "on" : "off"}
-        title="Sublinhado (Ctrl+U)"
-      >
-        <Underline className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 3,
-    component: (
-      <Button
-        key="highlight"
-        variant="ghost"
-        size="sm"
-        onClick={actions.toggleHighlight}
-        className="toolbar-button"
-        title="Destaque (fundo amarelo)"
-      >
-        <Highlighter className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 4,
-    component: (
-      <Button
-        key="code"
-        variant={isCode ? "default" : "ghost"}
-        size="sm"
-        onClick={() => actions.formatText("code")}
-        className={`toolbar-button ${isCode ? "active" : ""}`}
-        data-state={isCode ? "on" : "off"}
-        title="Código inline"
-      >
-        <Code className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 18,
-    component: (
-      <Button
-        key="comment"
-        variant="ghost"
-        size="sm"
-        onClick={actions.insertComment}
-        className="toolbar-button"
-        title="Adicionar comentário"
-      >
-        <MessageSquarePlus className="h-4 w-4" />
-      </Button>
-    ),
-  },
-  {
-    id: 17,
-    component: (
-      <DropdownMenu key="text-color">
-        <DropdownMenuTrigger asChild>
+    </motion.div>
+  );
+};
+
+// Componente de dropdown animado para cores
+const ColorPicker = ({
+  onColorSelect,
+}: {
+  onColorSelect: (color: string) => void;
+}) => {
+  const colors = [
+    { label: "Padrão", value: "", color: "rgb(148 163 184)" },
+    { label: "Vermelho", value: "#dc2626", color: "#dc2626" },
+    { label: "Laranja", value: "#ea580c", color: "#ea580c" },
+    { label: "Amarelo", value: "#ca8a04", color: "#ca8a04" },
+    { label: "Verde", value: "#16a34a", color: "#16a34a" },
+    { label: "Azul", value: "#2563eb", color: "#2563eb" },
+    { label: "Roxo", value: "#9333ea", color: "#9333ea" },
+    { label: "Rosa", value: "#db2777", color: "#db2777" },
+  ];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             variant="ghost"
             size="sm"
@@ -210,226 +154,270 @@ const createButtonsList = (
           >
             <Palette className="h-4 w-4" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {[
-            { label: "Sem cor", value: "" },
-            { label: "Vermelho", value: "#ef4444" },
-            { label: "Laranja", value: "#f97316" },
-            { label: "Amarelo", value: "#eab308" },
-            { label: "Verde", value: "#22c55e" },
-            { label: "Azul", value: "#3b82f6" },
-            { label: "Roxo", value: "#a855f7" },
-            { label: "Cinza", value: "#6b7280" },
-            { label: "Preto", value: "#111827" },
-          ].map((c) => (
-            <DropdownMenuItem
-              key={c.label}
-              onClick={() => actions.setTextColor(c.value)}
-            >
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 12,
-                  height: 12,
-                  borderRadius: 2,
-                  marginRight: 8,
-                  backgroundColor: c.value || "transparent",
-                  border: c.value
-                    ? "1px solid rgba(0,0,0,0.2)"
-                    : "1px dashed rgba(0,0,0,0.3)",
-                }}
-              />
-              {c.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </motion.div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        {colors.map((c) => (
+          <DropdownMenuItem
+            key={c.label}
+            onClick={() => onColorSelect(c.value)}
+            className="cursor-pointer"
+          >
+            <div
+              className="w-4 h-4 rounded mr-2 border border-border"
+              style={{ backgroundColor: c.color }}
+            />
+            {c.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const createButtonsList = (
+  isBold: boolean,
+  isItalic: boolean,
+  isUnderline: boolean,
+  isStrikethrough: boolean,
+  isCode: boolean,
+  actions: ToolbarActions
+): ToolbarButtonComponent[] => [
+  // FORMATAÇÃO
+  {
+    id: 0,
+    category: "format",
+    component: (
+      <AnimatedButton
+        key="bold"
+        isActive={isBold}
+        onClick={() => actions.formatText("bold")}
+        title="Negrito (Ctrl+B)"
+        icon={Bold}
+      />
     ),
   },
   {
-    id: 5,
+    id: 1,
+    category: "format",
     component: (
-      <Button
+      <AnimatedButton
+        key="italic"
+        isActive={isItalic}
+        onClick={() => actions.formatText("italic")}
+        title="Itálico (Ctrl+I)"
+        icon={Italic}
+      />
+    ),
+  },
+  {
+    id: 2,
+    category: "format",
+    component: (
+      <AnimatedButton
+        key="underline"
+        isActive={isUnderline}
+        onClick={() => actions.formatText("underline")}
+        title="Sublinhado (Ctrl+U)"
+        icon={Underline}
+      />
+    ),
+  },
+  {
+    id: 3,
+    category: "format",
+    component: (
+      <AnimatedButton
+        key="highlight"
+        onClick={actions.toggleHighlight}
+        title="Destacar texto"
+        icon={Highlighter}
+      />
+    ),
+  },
+  {
+    id: 4,
+    category: "format",
+    component: (
+      <AnimatedButton
+        key="code"
+        isActive={isCode}
+        onClick={() => actions.formatText("code")}
+        title="Código inline"
+        icon={Code2}
+      />
+    ),
+  },
+  {
+    id: 17,
+    category: "format",
+    component: (
+      <ColorPicker key="text-color" onColorSelect={actions.setTextColor} />
+    ),
+  },
+  // ESTRUTURA
+  {
+    id: 5,
+    category: "structure",
+    component: (
+      <AnimatedButton
         key="h1"
-        variant="ghost"
-        size="sm"
         onClick={() => actions.insertHeading("h1")}
-        className="toolbar-button"
         title="Título 1"
-      >
-        <Heading1 className="h-4 w-4" />
-      </Button>
+        icon={Heading1}
+      />
     ),
   },
   {
     id: 6,
+    category: "structure",
     component: (
-      <Button
+      <AnimatedButton
         key="h2"
-        variant="ghost"
-        size="sm"
         onClick={() => actions.insertHeading("h2")}
-        className="toolbar-button"
         title="Título 2"
-      >
-        <Heading2 className="h-4 w-4" />
-      </Button>
+        icon={Heading2}
+      />
     ),
   },
   {
     id: 7,
+    category: "structure",
     component: (
-      <Button
+      <AnimatedButton
         key="h3"
-        variant="ghost"
-        size="sm"
         onClick={() => actions.insertHeading("h3")}
-        className="toolbar-button"
         title="Título 3"
-      >
-        <Heading3 className="h-4 w-4" />
-      </Button>
+        icon={Heading3}
+      />
     ),
   },
   {
     id: 8,
+    category: "structure",
     component: (
-      <Button
+      <AnimatedButton
         key="bullet-list"
-        variant="ghost"
-        size="sm"
         onClick={() => actions.insertList("bullet")}
-        className="toolbar-button"
         title="Lista com marcadores"
-      >
-        <List className="h-4 w-4" />
-      </Button>
+        icon={List}
+      />
     ),
   },
   {
     id: 9,
+    category: "structure",
     component: (
-      <Button
+      <AnimatedButton
         key="ordered-list"
-        variant="ghost"
-        size="sm"
         onClick={() => actions.insertList("number")}
-        className="toolbar-button"
         title="Lista numerada"
-      >
-        <ListOrdered className="h-4 w-4" />
-      </Button>
+        icon={ListOrdered}
+      />
     ),
   },
   {
     id: 10,
+    category: "structure",
     component: (
-      <Button
+      <AnimatedButton
         key="quote"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertQuote}
-        className="toolbar-button"
         title="Citação"
-      >
-        <Quote className="h-4 w-4" />
-      </Button>
+        icon={Quote}
+      />
     ),
   },
+  // INSERIR
   {
     id: 11,
+    category: "insert",
     component: (
-      <Button
+      <AnimatedButton
         key="hr"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertHorizontalRule}
-        className="toolbar-button"
-        title="Divisor Horizontal"
-      >
-        <Minus className="h-4 w-4" />
-      </Button>
+        title="Divisor horizontal"
+        icon={Minus}
+      />
     ),
   },
   {
     id: 12,
+    category: "insert",
     component: (
-      <Button
+      <AnimatedButton
         key="code-block"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertCodeBlock}
-        className="toolbar-button"
-        title="Bloco de Código"
-      >
-        <SquareTerminal className="h-4 w-4" />
-      </Button>
+        title="Bloco de código"
+        icon={Terminal}
+      />
     ),
   },
   {
     id: 13,
+    category: "insert",
     component: (
-      <Button
+      <AnimatedButton
         key="link"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertLink}
-        className="toolbar-button"
-        title="Inserir Link"
-      >
-        <Link className="h-4 w-4" />
-      </Button>
+        title="Inserir link"
+        icon={Link2}
+      />
     ),
   },
   {
-    id: 14,
+    id: 18,
+    category: "insert",
     component: (
-      <Button
+      <AnimatedButton
+        key="comment"
+        onClick={actions.insertComment}
+        title="Adicionar comentário"
+        icon={MessageSquareText}
+      />
+    ),
+  },
+  // ESPECIAIS
+  {
+    id: 14,
+    category: "special",
+    component: (
+      <AnimatedButton
         key="insert-tag"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertTag}
-        className="toolbar-button toolbar-button-secondary"
-        title="Inserir Tag (#tag)"
-      >
-        <Hash className="h-4 w-4" />
-      </Button>
+        title="Inserir tag (#tag)"
+        icon={Hash}
+        variant="secondary"
+      />
     ),
   },
   {
     id: 15,
+    category: "special",
     component: (
-      <Button
+      <AnimatedButton
         key="insert-wiki-link"
-        variant="ghost"
-        size="sm"
         onClick={actions.insertWikiLink}
-        className="toolbar-button toolbar-button-secondary"
-        title="Inserir Link Wiki ([[link]])"
-      >
-        <BookOpenText className="h-4 w-4" />
-      </Button>
+        title="Inserir link wiki ([[link]])"
+        icon={FileText}
+        variant="secondary"
+      />
     ),
   },
   {
     id: 16,
+    category: "special",
     component: (
-      <Button
+      <AnimatedButton
         key="read-mode"
-        variant="ghost"
-        size="sm"
         onClick={actions.onToggleReadMode}
-        className="toolbar-button"
         title="Modo leitura"
-      >
-        <Eye className="h-4 w-4" />
-      </Button>
+        icon={Eye}
+      />
     ),
   },
 ];
 
-// O número total de botões é estável
 const TOTAL_BUTTONS = createButtonsList(
   false,
   false,
@@ -438,10 +426,6 @@ const TOTAL_BUTTONS = createButtonsList(
   false,
   {} as ToolbarActions
 ).length;
-
-// ===============================================
-// === FIM: Botões fora do componente          ===
-// ===============================================
 
 function useKeyboardOffset() {
   const [offset, setOffset] = useState(0);
@@ -453,13 +437,11 @@ function useKeyboardOffset() {
     if (!vv) return;
 
     const update = () => {
-      // Considera apenas mobile para evitar deslocamento em telas grandes
       const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
       if (!isMobile) {
         setOffset(0);
         return;
       }
-      // Área oculta pelo teclado = diferença entre layout viewport e visual viewport
       const layoutH = window.innerHeight;
       const visualBottom = vv.height + vv.offsetTop;
       const hidden = Math.max(0, Math.round(layoutH - visualBottom));
@@ -502,7 +484,6 @@ export default function Toolbar({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // --- Funções de Ação Lexical (Permanecem aqui) ---
   const formatText = (format: TextFormatType) => {
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
   };
@@ -529,12 +510,8 @@ export default function Toolbar({
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         const anchor = selection.anchor;
-
-        // Pega o elemento de bloco atual
         const element = anchor.getNode().getTopLevelElement();
-
         if (element && element.getType() !== "quote") {
-          // Converte o bloco atual em quote
           $setBlocksType(selection, () => $createQuoteNode());
         }
       }
@@ -548,34 +525,23 @@ export default function Toolbar({
   const insertCodeBlock = () => {
     editor.update(() => {
       const selection = $getSelection();
-
       if ($isRangeSelection(selection)) {
-        // Pega o nó do bloco atual
         const anchorNode = selection.anchor.getNode();
         const element = anchorNode.getTopLevelElementOrThrow();
-
-        // Cria o novo nó de código
         const codeNode = $createCodeNode();
-
-        // Transfere o conteúdo do bloco atual para o código
         const children = element.getChildren();
         children.forEach((child) => {
           codeNode.append(child);
         });
-
-        // Substitui o elemento atual pelo bloco de código
         element.replace(codeNode);
-
-        // Move o cursor para o final do bloco de código
         codeNode.selectEnd();
       }
     });
   };
 
   const insertLink = () => {
-    const linkUrl = prompt("Enter the URL");
+    const linkUrl = prompt("Digite a URL do link:");
     if (linkUrl) {
-      // Usando TOGGLE_LINK_COMMAND
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, linkUrl);
     }
   };
@@ -601,11 +567,12 @@ export default function Toolbar({
       }
     });
   };
+
   const toggleHighlight = () => {
     editor.update(() => {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        const HIGHLIGHT_COLOR = "#ffd54f"; // laranja/âmbar
+        const HIGHLIGHT_COLOR = "#fef08a";
         const nodes = selection.getNodes();
 
         let anyHighlighted = false;
@@ -628,10 +595,8 @@ export default function Toolbar({
         }
 
         if (anyHighlighted && allHighlightedWithTarget) {
-          // Remove o destaque quando já estiver com a mesma cor
           $patchStyleText(selection, { "background-color": "", color: "" });
         } else {
-          // Aplica/atualiza para a cor padrão de destaque
           $patchStyleText(selection, {
             "background-color": HIGHLIGHT_COLOR,
             color: "#000000",
@@ -653,13 +618,11 @@ export default function Toolbar({
       }
     });
   };
+
   const insertComment = () => {
-    // Abre o modal de comentários via evento global
     window.dispatchEvent(new Event("editor-open-comment-dialog"));
   };
-  // --- Fim das Funções de Ação Lexical ---
 
-  // Objeto de ações para ser passado para createButtonsList
   const actions: ToolbarActions = {
     formatText,
     insertHeading,
@@ -676,7 +639,6 @@ export default function Toolbar({
     insertComment,
   };
 
-  // A lista de botões é re-criada AQUI para refletir os estados is* atuais
   const buttons = createButtonsList(
     isBold,
     isItalic,
@@ -708,7 +670,6 @@ export default function Toolbar({
     );
   }, [editor, updateToolbar]);
 
-  // Calcula quantos botões cabem na largura disponível
   useEffect(() => {
     const calculateVisibleButtons = () => {
       if (!containerRef.current) return;
@@ -722,10 +683,8 @@ export default function Toolbar({
       const availableWidthForButtons = containerWidth - padding;
       const reservedWidthForExpand = expandButtonWidth + gap;
 
-      let count = 0;
       let buttonsFit = 0;
 
-      // Usamos a constante TOTAL_BUTTONS que é estável
       for (let i = 0; i < TOTAL_BUTTONS; i++) {
         const currentButtonsWidth = i * (buttonWidth + gap);
         const nextTotalWidth =
@@ -737,19 +696,9 @@ export default function Toolbar({
         buttonsFit++;
       }
 
-      count = buttonsFit;
-      count = Math.max(3, count);
-      count = Math.min(TOTAL_BUTTONS, count);
-
-      // Gera o novo array de IDs visíveis
+      const count = Math.min(TOTAL_BUTTONS, Math.max(3, buttonsFit));
       const newVisibleButtons = Array.from({ length: count }, (_, i) => i);
 
-      // --- Checagem de Mudança para Evitar Loop ---
-      // CORREÇÃO ESSENCIAL: Checa se houve mudança real antes de chamar setState
-      // Este bloco foi mantido e é a chave para evitar loop *dentro* da função
-      // (embora a dependência fosse o problema primário).
-
-      // 1. Atualiza visibleButtons se for diferente
       const currentVisibleButtonsString = JSON.stringify(visibleButtons);
       const newVisibleButtonsString = JSON.stringify(newVisibleButtons);
 
@@ -757,11 +706,9 @@ export default function Toolbar({
         setVisibleButtons(newVisibleButtons);
       }
 
-      // 2. Atualiza hasOverflow se for diferente
       const newHasOverflow = count < TOTAL_BUTTONS;
       if (newHasOverflow !== hasOverflow) {
         setHasOverflow(newHasOverflow);
-        // Garante que isExpanded é false se não há overflow
         if (!newHasOverflow && isExpanded) {
           setIsExpanded(false);
         }
@@ -772,10 +719,8 @@ export default function Toolbar({
       requestAnimationFrame(calculateVisibleButtons);
     };
 
-    // Chama a função imediatamente
     calculateVisibleButtons();
 
-    // Adiciona event listeners
     window.addEventListener("resize", debouncedCalculate);
     window.addEventListener("orientationchange", debouncedCalculate);
 
@@ -783,51 +728,128 @@ export default function Toolbar({
       window.removeEventListener("resize", debouncedCalculate);
       window.removeEventListener("orientationchange", debouncedCalculate);
     };
-    // CORREÇÃO FINAL: Usamos TOTAL_BUTTONS que é estável e global.
-    // O problema de loop era causado pela declaração de 'buttons' dentro do componente.
-    // Agora, as dependências do useEffect estão corretas e estáveis.
-  }, [hasOverflow, isExpanded, visibleButtons]); // Manter estas dependências para React 18, mas a lista de botões é estável.
+  }, [hasOverflow, isExpanded, visibleButtons]);
+
+  // Organiza botões por categoria quando expandido
+  const buttonsByCategory = {
+    format: buttons.filter((b) => b.category === "format"),
+    structure: buttons.filter((b) => b.category === "structure"),
+    insert: buttons.filter((b) => b.category === "insert"),
+    special: buttons.filter((b) => b.category === "special"),
+  };
+
+  const categoryLabels = {
+    format: "Formatação",
+    structure: "Estrutura",
+    insert: "Inserir",
+    special: "Especial",
+  };
 
   return (
-    <div
+    <motion.div
       ref={containerRef}
       className={`toolbar-container ${
         hasOverflow && isExpanded ? "expanded" : ""
       }`}
-      style={{
-        "--kb-offset": `${keyboardOffset}px`,
-        // Afasta a toolbar da borda direita quando o sidebar do editor está aberto (desktop)
-        right: sidebarExpanded ? "var(--sidebar-width)" : 0,
-      } as CSSProperties}
+      style={
+        {
+          "--kb-offset": `${keyboardOffset}px`,
+          right: sidebarExpanded ? "var(--sidebar-width)" : 0,
+        } as CSSProperties
+      }
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <div ref={contentRef} className="toolbar-content">
-        {/* Renderiza botões visíveis ou todos se expandido */}
-        {(isExpanded && hasOverflow
-          ? buttons
-          : buttons.filter((b) => visibleButtons.includes(b.id))
-        ).map((button) => (
-          <Fragment key={button.id}>{button.component}</Fragment>
-        ))}
+        {!isExpanded ? (
+          // Vista compacta - botões em linha
+          <AnimatePresence mode="popLayout">
+            {buttons
+              .filter((b) => visibleButtons.includes(b.id))
+              .map((button) => (
+                <motion.div
+                  key={button.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {button.component}
+                </motion.div>
+              ))}
+          </AnimatePresence>
+        ) : (
+          // Vista expandida - botões por categoria
+          <motion.div
+            className="toolbar-categories"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            {Object.entries(buttonsByCategory).map(
+              ([category, categoryButtons], categoryIndex) => (
+                <motion.div
+                  key={category}
+                  className="toolbar-category"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: categoryIndex * 0.05 }}
+                >
+                  <div className="toolbar-category-label">
+                    {categoryLabels[category as keyof typeof categoryLabels]}
+                  </div>
+                  <div className="toolbar-category-buttons">
+                    {categoryButtons.map((button, index) => (
+                      <motion.div
+                        key={button.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{
+                          delay: categoryIndex * 0.05 + index * 0.02,
+                        }}
+                      >
+                        {button.component}
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )
+            )}
+          </motion.div>
+        )}
 
-        {/* Botão de expandir - só aparece se houver overflow */}
         {hasOverflow && (
-          <div className="toolbar-expand-button">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="toolbar-button"
-              title={isExpanded ? "Recolher toolbar" : "Expandir toolbar"}
+          <motion.div
+            className="toolbar-expand-button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
-              <ChevronUp
-                className={`h-4 w-4 transition-transform ${
-                  isExpanded ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="toolbar-button"
+                title={isExpanded ? "Recolher toolbar" : "Expandir toolbar"}
+              >
+                <motion.div
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronsUp className="h-4 w-4" />
+                </motion.div>
+              </Button>
+            </motion.div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

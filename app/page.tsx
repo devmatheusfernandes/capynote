@@ -25,7 +25,7 @@ export default function Home() {
     setError("");
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      router.push("/dashboard/notas");
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -45,7 +45,7 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex flex-col items-center gap-4 justify-center bg-background relative overflow-hidden px-4">
+      <div className="min-h-screen flex flex-col items-center gap-4 justify-center !bg-amber-100 dark:!bg-amber-950 relative overflow-hidden px-4">
         <div className="absolute top-3 right-3">
           <ThemeToggle />
         </div>
@@ -74,7 +74,7 @@ export default function Home() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full h-14 sm:h-16 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white border-2 border-gray-100 dark:border-gray-600 font-medium text-base sm:text-lg transition-all duration-200 shadow-lg hover:shadow-xs"
+              className="w-full h-14 sm:h-16 bg-amber-200 hover:bg-amber-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white border-2 border-amber-200 dark:border-gray-600 font-medium text-base sm:text-lg transition-all duration-200 shadow-lg hover:shadow-xs"
             >
               <svg
                 className="w-6 h-6 sm:w-7 sm:h-7 mr-3"

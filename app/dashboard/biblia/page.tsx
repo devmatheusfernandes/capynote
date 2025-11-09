@@ -36,9 +36,11 @@ export default function BibliaPage() {
   const [error, setError] = useState<string | null>(null);
   const [highlightedVerse, setHighlightedVerse] = useState<number | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  
+
   function scrollVerseIntoView(n: number) {
-    const el = document.querySelector(`[data-verse="${n}"]`) as HTMLElement | null;
+    const el = document.querySelector(
+      `[data-verse="${n}"]`
+    ) as HTMLElement | null;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const offset = 96; // keep verse near the top under sticky header
@@ -192,7 +194,7 @@ export default function BibliaPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-safe">
-      <div className="p-3 sm:p-4 max-w-4xl mx-auto">
+      <div className="p-3 sm:p-4 w-full px-16">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -212,9 +214,9 @@ export default function BibliaPage() {
           transition={{ delay: 0.1 }}
           className="mb-6"
         >
-          <div className="grid grid-cols-12 gap-2 lg:gap-3">
+          <div className="flex flex-wrap gap-3">
             {/* Search Bar */}
-            <div className="col-span-12 lg:col-span-6 min-w-0">
+            <div className="min-w-0">
               <label className="text-sm font-medium mb-2 block">Buscar</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -244,25 +246,12 @@ export default function BibliaPage() {
                       </motion.button>
                     )}
                   </AnimatePresence>
-                  <Button
-                    onClick={() => void handleSearch()}
-                    disabled={searching || !query.trim()}
-                    size="sm"
-                    className="h-8"
-                  >
-                    {searching ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <span className="hidden sm:inline">Buscar</span>
-                    )}
-                    {!searching && <Search className="w-4 h-4 sm:hidden" />}
-                  </Button>
                 </div>
               </div>
             </div>
 
             {/* Book Selector */}
-            <div className="col-span-8 lg:col-span-4 min-w-0">
+            <div className="min-w-0">
               <label className="text-sm font-medium mb-2 block">Livro</label>
               <Select
                 value={book}
@@ -285,7 +274,7 @@ export default function BibliaPage() {
             </div>
 
             {/* Chapter Selector */}
-            <div className="col-span-4 lg:col-span-2 min-w-0">
+            <div className="min-w-0">
               <label className="text-sm font-medium mb-2 block">Capítulo</label>
               <Select
                 value={chapter ? String(chapter) : ""}

@@ -47,11 +47,6 @@ import { useLastUser } from "@/hooks/use-last-user";
 
 const navigationItems = [
   {
-    title: "Início",
-    url: "/dashboard",
-    icon: Home,
-  },
-  {
     title: "Notas",
     url: "/dashboard/notas",
     icon: FileText,
@@ -146,7 +141,8 @@ function AppSidebar() {
   const { logout, user } = useAuth();
   const { lastUser } = useLastUser();
   const avatarUrl = user?.photoURL ?? lastUser?.photoURL ?? undefined;
-  const [showBibleInSidebar, setShowBibleInSidebar] = React.useState<boolean>(true);
+  const [showBibleInSidebar, setShowBibleInSidebar] =
+    React.useState<boolean>(true);
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -157,7 +153,9 @@ function AppSidebar() {
     if (!user?.id) return;
     const settingsRef = doc(db, "users", user.id, "meta", "settings");
     const unsub = onSnapshot(settingsRef, (snap) => {
-      const data = snap.data() as { showBibleOnDashboard?: boolean } | undefined;
+      const data = snap.data() as
+        | { showBibleOnDashboard?: boolean }
+        | undefined;
       if (typeof data?.showBibleOnDashboard === "boolean") {
         setShowBibleInSidebar(data.showBibleOnDashboard);
       }
@@ -170,7 +168,11 @@ function AppSidebar() {
     if (showBibleInSidebar) {
       // Inserir Bíblia após "Notas"
       const insertIndex = items.findIndex((i) => i.title === "Tarefas");
-      const bibleItem = { title: "Bíblia", url: "/dashboard/biblia", icon: Book };
+      const bibleItem = {
+        title: "Bíblia",
+        url: "/dashboard/biblia",
+        icon: Book,
+      };
       if (insertIndex > 0) {
         items.splice(insertIndex, 0, bibleItem);
       } else {
@@ -295,7 +297,8 @@ function MobileHeader() {
 
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isEditingNote = pathname?.startsWith("/dashboard/notas/editar/") ?? false;
+  const isEditingNote =
+    pathname?.startsWith("/dashboard/notas/editar/") ?? false;
   const hideMobileHeader = isEditingNote;
 
   // Quando estiver na página de edição de nota, não exibir o dashboard/sidebar

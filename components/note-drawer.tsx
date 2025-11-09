@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import NoteEditorWithToolbar from "@/components/editor/note-editor-with-toolbar";
+import SidebarEditorProvider from "@/components/editor/sidebar-editor-provider";
+import SidebarEditor from "@/components/editor/sidebar-editor";
 import { TagSelector } from "@/components/tag-selector";
 import { NoteData, FolderData, TagData } from "@/types";
 import { useAuth } from "@/contexts/auth-context";
@@ -340,8 +342,11 @@ export function NoteDrawer({
   }, [hasChanges, hasRealContent, saveNote, router, noteId, onOpenChange]);
 
   return (
-    <Drawer open={open} onOpenChange={handleClose}>
-      <DrawerContent className="h-[85vh] flex flex-col">
+    <SidebarEditorProvider noteId={noteId}>
+      {/* Right-side editor sidebar (floating) */}
+      <SidebarEditor />
+      <Drawer open={open} onOpenChange={handleClose}>
+        <DrawerContent className="h-[85vh] flex flex-col">
         <DrawerHeader className="flex-shrink-0 border-b">
           <div className="flex items-center justify-between">
             <DrawerTitle className="text-left">
@@ -449,28 +454,28 @@ export function NoteDrawer({
           </div>
         )}
       </DrawerContent>
-
-      {/* Discard Confirmation Dialog */}
-      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Descartar nota?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A nota será permanentemente
-              excluída.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDiscard}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Descartar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Drawer>
+        {/* Discard Confirmation Dialog */}
+        <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Descartar nota?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. A nota será permanentemente
+                excluída.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDiscard}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Descartar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Drawer>
+    </SidebarEditorProvider>
   );
 }

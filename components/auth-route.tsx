@@ -14,7 +14,7 @@ export function AuthRoute({ children }: AuthRouteProps) {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push("/dashboard");
+      router.push("/dashboard/notas");
     }
   }, [isAuthenticated, isLoading, router]);
 

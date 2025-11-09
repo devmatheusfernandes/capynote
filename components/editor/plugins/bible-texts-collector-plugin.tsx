@@ -110,11 +110,11 @@ export default function BibleTextsCollectorPlugin() {
         for (const { key, text } of links) {
           const plain = text.replace(/\u00A0/g, " ");
           const infos = parseAllReferences(plain);
-          console.log(
-            "[BibleTextsCollector] referências extraídas de",
-            plain,
-            infos
-          );
+          // console.log(
+          //   "[BibleTextsCollector] referências extraídas de",
+          //   plain,
+          //   infos
+          // );
           for (const info of infos) {
             const { title, content } = await fetchContentForInfo(info);
             items.push({ key, title, content });

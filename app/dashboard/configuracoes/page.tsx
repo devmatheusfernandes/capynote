@@ -13,7 +13,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+} from "@/components/ui/button-group";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -68,7 +71,9 @@ export default function ConfiguracoesPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"geral" | "biblia">("geral");
   const [books, setBooks] = useState<string[]>([]);
-  const [customAbbrevs, setCustomAbbrevs] = useState<Record<string, string>>({});
+  const [customAbbrevs, setCustomAbbrevs] = useState<Record<string, string>>(
+    {}
+  );
   const [newAbbrev, setNewAbbrev] = useState<string>("");
   const [newBook, setNewBook] = useState<string>("");
   const [availableTags, setAvailableTags] = useState<TagData[]>([]);
@@ -80,7 +85,8 @@ export default function ConfiguracoesPage() {
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
   const [backupIntervalHours, setBackupIntervalHours] = useState<number>(24);
   const [backupPreferredTime, setBackupPreferredTime] = useState<string>("");
-  const [showBibleOnDashboard, setShowBibleOnDashboard] = useState<boolean>(true);
+  const [showBibleOnDashboard, setShowBibleOnDashboard] =
+    useState<boolean>(true);
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
@@ -129,7 +135,9 @@ export default function ConfiguracoesPage() {
     if (!userId) return;
     const settingsRef = doc(db, "users", userId, "meta", "settings");
     const unsub = onSnapshot(settingsRef, (snap) => {
-      const data = snap.data() as { customAbbreviations?: Record<string, string> } | undefined;
+      const data = snap.data() as
+        | { customAbbreviations?: Record<string, string> }
+        | undefined;
       setCustomAbbrevs(data?.customAbbreviations || {});
     });
     return () => unsub();
@@ -139,12 +147,19 @@ export default function ConfiguracoesPage() {
     if (!user?.id) return;
     const key = newAbbrev.trim().toLowerCase().replace(/\.$/, "");
     const value = newBook.trim();
-    if (!key || !value) return toast.error("Informe abreviação e selecione um livro");
-    if (BOOK_ABBREVIATIONS[key]) return toast.error("Essa abreviação já existe (padrão)");
-    if (customAbbrevs[key]) return toast.error("Essa abreviação já existe (personalizada)");
+    if (!key || !value)
+      return toast.error("Informe abreviação e selecione um livro");
+    if (BOOK_ABBREVIATIONS[key])
+      return toast.error("Essa abreviação já existe (padrão)");
+    if (customAbbrevs[key])
+      return toast.error("Essa abreviação já existe (personalizada)");
     const settingsRef = doc(db, "users", user.id, "meta", "settings");
     const next = { ...customAbbrevs, [key]: value };
-    await setDoc(settingsRef, { customAbbreviations: next, updatedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(
+      settingsRef,
+      { customAbbreviations: next, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
     setNewAbbrev("");
     setNewBook("");
     toast.success("Abreviação adicionada");
@@ -155,7 +170,11 @@ export default function ConfiguracoesPage() {
     const next = { ...customAbbrevs };
     delete next[key];
     const settingsRef = doc(db, "users", user.id, "meta", "settings");
-    await setDoc(settingsRef, { customAbbreviations: next, updatedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(
+      settingsRef,
+      { customAbbreviations: next, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
     toast.success("Abreviação removida");
   };
 
@@ -488,7 +507,7 @@ export default function ConfiguracoesPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 container sm:p-6 p-4 sm:max-w-[80vw] max-w-[100vw]">
+    <div className="space-y-4 sm:space-y-6 container sm:p-6 p-4 h-full max-w-[100vw]">
       <PageHeader
         title="Configurações"
         description="Gerencie suas preferências e configurações da aplicação."
@@ -514,277 +533,289 @@ export default function ConfiguracoesPage() {
         </ButtonGroup>
       </div>
       {activeTab === "geral" && (
-      <div className="grid gap-4 sm:gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Gerenciar Tags</CardTitle>
-            <CardDescription>
-              Visualize e gerencie todas as suas tags. Deletar uma tag a
-              removerá de todas as notas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {availableTags.length === 0 ? (
-              <div className="text-center py-6 sm:py-8">
-                <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Nenhuma tag encontrada</p>
-                <p className="text-sm text-muted-foreground">
-                  Tags são criadas automaticamente quando você as adiciona às
-                  suas notas.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {availableTags.length} tag
-                  {availableTags.length !== 1 ? "s" : ""} encontrada
-                  {availableTags.length !== 1 ? "s" : ""}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => (
-                    <div key={tag.id} className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="px-2 py-1 text-xs sm:text-sm"
-                      >
-                        {tag.name}
-                      </Badge>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Deletar tag</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja deletar a tag {tag.name}?
-                              Esta ação removerá a tag de todas as notas e não
-                              pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteTag(tag.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Deletar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ))}
+        <div className="grid gap-4 sm:gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciar Tags</CardTitle>
+              <CardDescription>
+                Visualize e gerencie todas as suas tags. Deletar uma tag a
+                removerá de todas as notas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {availableTags.length === 0 ? (
+                <div className="text-center py-6 sm:py-8">
+                  <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Nenhuma tag encontrada
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Tags são criadas automaticamente quando você as adiciona às
+                    suas notas.
+                  </p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {availableTags.length} tag
+                    {availableTags.length !== 1 ? "s" : ""} encontrada
+                    {availableTags.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map((tag) => (
+                      <div key={tag.id} className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="px-2 py-1 text-xs sm:text-sm"
+                        >
+                          {tag.name}
+                        </Badge>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Deletar tag</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar a tag {tag.name}?
+                                Esta ação removerá a tag de todas as notas e não
+                                pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteTag(tag.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Aparência</CardTitle>
+              <CardDescription>
+                Personalize a aparência da aplicação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 sm:items-center">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">Tema</label>
+                  <p className="text-sm text-muted-foreground">
+                    Escolha entre tema claro e escuro.
+                  </p>
+                </div>
+                <ThemeToggle />
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Aparência</CardTitle>
-            <CardDescription>
-              Personalize a aparência da aplicação.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between gap-3 sm:items-center">
-              <div className="space-y-0.5">
-                <label className="text-sm font-medium">Tema</label>
-                <p className="text-sm text-muted-foreground">
-                  Escolha entre tema claro e escuro.
-                </p>
-              </div>
-              <ThemeToggle />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Dashboard</CardTitle>
-            <CardDescription>Escolha o que aparece no dashboard.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <label className="text-sm font-medium">Mostrar Bíblia no Dashboard</label>
-                <p className="text-sm text-muted-foreground">
-                  Exibe um card de acesso rápido à Bíblia na página inicial.
-                </p>
-              </div>
-              <Checkbox
-                checked={showBibleOnDashboard}
-                onCheckedChange={(v) => toggleShowBibleOnDashboard(Boolean(v))}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Conta</CardTitle>
-            <CardDescription>
-              Informações da sua conta e preferências.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <p className="text-sm text-muted-foreground">
-                Seu email está sendo usado para login e notificações.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Notificações</CardTitle>
-            <CardDescription>
-              Configure como você quer receber notificações.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notificações Push</label>
-              <p className="text-sm text-muted-foreground">
-                Ative para receber lembretes das tarefas na data e horário.
-              </p>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <Button
-                  className="w-full sm:w-auto"
-                  variant={notificationsEnabled ? "default" : "outline"}
-                  onClick={toggleNotifications}
-                >
-                  {notificationsEnabled ? "Desativar" : "Ativar"} notificações
-                </Button>
-                <Button
-                  className="w-full sm:w-auto"
-                  variant="secondary"
-                  onClick={testNotification}
-                >
-                  Testar notificação
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Horário padrão para tarefas com apenas data
-              </label>
-              <p className="text-sm text-muted-foreground">
-                Usado quando você define apenas a data da tarefa.
-              </p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <Input
-                  type="time"
-                  value={defaultTaskTime}
-                  onChange={(e) => saveDefaultTaskTime(e.target.value)}
-                  className="w-full sm:max-w-[160px]"
+          <Card>
+            <CardHeader>
+              <CardTitle>Dashboard</CardTitle>
+              <CardDescription>
+                Escolha o que aparece no dashboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">
+                    Mostrar Bíblia no Dashboard
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Exibe um card de acesso rápido à Bíblia na página inicial.
+                  </p>
+                </div>
+                <Checkbox
+                  checked={showBibleOnDashboard}
+                  onCheckedChange={(v) =>
+                    toggleShowBibleOnDashboard(Boolean(v))
+                  }
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Backup no Google Drive</CardTitle>
-            <CardDescription>
-              Faça backup manual ou habilite backup automático diário.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status do backup</label>
-              <div className="flex items-center gap-2">
-                {lastBackupAt ? (
-                  <Badge variant="secondary">
-                    Último backup: {new Date(lastBackupAt).toLocaleString()}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Nunca realizado</Badge>
-                )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Conta</CardTitle>
+              <CardDescription>
+                Informações da sua conta e preferências.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <p className="text-sm text-muted-foreground">
+                  Seu email está sendo usado para login e notificações.
+                </p>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <Button
-                className="w-full sm:w-auto"
-                onClick={handleBackupNow}
-                disabled={isBackingUp}
-              >
-                {isBackingUp ? "Realizando backup..." : "Fazer backup agora"}
-              </Button>
-              <Button
-                className="w-full sm:w-auto"
-                variant={autoBackupEnabled ? "default" : "outline"}
-                onClick={toggleAutoBackup}
-              >
-                {autoBackupEnabled ? "Desativar" : "Ativar"} backup automático
-              </Button>
-              <Button
-                className="w-full sm:w-auto"
-                variant="outline"
-                onClick={triggerRestoreFile}
-              >
-                Restaurar backup
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium">
-                Agendamento do backup
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Período</span>
-                  <Select
-                    value={String(backupIntervalHours)}
-                    onValueChange={changeBackupInterval}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notificações</CardTitle>
+              <CardDescription>
+                Configure como você quer receber notificações.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notificações Push</label>
+                <p className="text-sm text-muted-foreground">
+                  Ative para receber lembretes das tarefas na data e horário.
+                </p>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant={notificationsEnabled ? "default" : "outline"}
+                    onClick={toggleNotifications}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o período" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="12">A cada 12 horas</SelectItem>
-                      <SelectItem value="24">A cada 24 horas</SelectItem>
-                      <SelectItem value="48">A cada 48 horas</SelectItem>
-                      <SelectItem value="168">Semanal (168 horas)</SelectItem>
-                      <SelectItem value="336">Quinzenal (336 horas)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    {notificationsEnabled ? "Desativar" : "Ativar"} notificações
+                  </Button>
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={testNotification}
+                  >
+                    Testar notificação
+                  </Button>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">
-                    Horário preferido
-                  </span>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Horário padrão para tarefas com apenas data
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Usado quando você define apenas a data da tarefa.
+                </p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                   <Input
                     type="time"
-                    value={backupPreferredTime || ""}
-                    onChange={(e) => saveBackupPreferredTime(e.target.value)}
+                    value={defaultTaskTime}
+                    onChange={(e) => saveDefaultTaskTime(e.target.value)}
+                    className="w-full sm:max-w-[160px]"
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                O backup automático será tentado próximo ao horário preferido,
-                dentro de uma janela de 30 minutos. Se o app estiver fechado,
-                será realizado na próxima execução.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Backup no Google Drive</CardTitle>
+              <CardDescription>
+                Faça backup manual ou habilite backup automático diário.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status do backup</label>
+                <div className="flex items-center gap-2">
+                  {lastBackupAt ? (
+                    <Badge variant="secondary">
+                      Último backup: {new Date(lastBackupAt).toLocaleString()}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">Nunca realizado</Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={handleBackupNow}
+                  disabled={isBackingUp}
+                >
+                  {isBackingUp ? "Realizando backup..." : "Fazer backup agora"}
+                </Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  variant={autoBackupEnabled ? "default" : "outline"}
+                  onClick={toggleAutoBackup}
+                >
+                  {autoBackupEnabled ? "Desativar" : "Ativar"} backup automático
+                </Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="outline"
+                  onClick={triggerRestoreFile}
+                >
+                  Restaurar backup
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium">
+                  Agendamento do backup
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Período
+                    </span>
+                    <Select
+                      value={String(backupIntervalHours)}
+                      onValueChange={changeBackupInterval}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o período" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="12">A cada 12 horas</SelectItem>
+                        <SelectItem value="24">A cada 24 horas</SelectItem>
+                        <SelectItem value="48">A cada 48 horas</SelectItem>
+                        <SelectItem value="168">Semanal (168 horas)</SelectItem>
+                        <SelectItem value="336">
+                          Quinzenal (336 horas)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Horário preferido
+                    </span>
+                    <Input
+                      type="time"
+                      value={backupPreferredTime || ""}
+                      onChange={(e) => saveBackupPreferredTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O backup automático será tentado próximo ao horário preferido,
+                  dentro de uma janela de 30 minutos. Se o app estiver fechado,
+                  será realizado na próxima execução.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {activeTab === "biblia" && (
@@ -799,14 +830,18 @@ export default function ConfiguracoesPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Mostrar Bíblia no Dashboard</label>
+                  <label className="text-sm font-medium">
+                    Mostrar Bíblia no Dashboard
+                  </label>
                   <p className="text-sm text-muted-foreground">
                     Exibe um card de acesso rápido à Bíblia na página inicial.
                   </p>
                 </div>
                 <Checkbox
                   checked={showBibleOnDashboard}
-                  onCheckedChange={(v) => toggleShowBibleOnDashboard(Boolean(v))}
+                  onCheckedChange={(v) =>
+                    toggleShowBibleOnDashboard(Boolean(v))
+                  }
                 />
               </div>
             </CardContent>
@@ -816,12 +851,15 @@ export default function ConfiguracoesPage() {
             <CardHeader>
               <CardTitle>Abreviações de Livros</CardTitle>
               <CardDescription>
-                Visualize e personalize abreviações usadas ao reconhecer referências.
+                Visualize e personalize abreviações usadas ao reconhecer
+                referências.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Abreviações padrão</label>
+                <label className="text-sm font-medium">
+                  Abreviações padrão
+                </label>
                 <p className="text-sm text-muted-foreground">
                   Estas abreviações já são reconhecidas automaticamente.
                 </p>
@@ -829,7 +867,10 @@ export default function ConfiguracoesPage() {
                   {Object.entries(BOOK_ABBREVIATIONS)
                     .sort((a, b) => a[0].localeCompare(b[0]))
                     .map(([abbr, book]) => (
-                      <div key={abbr} className="flex items-center justify-between py-1">
+                      <div
+                        key={abbr}
+                        className="flex items-center justify-between py-1"
+                      >
                         <span className="font-mono">{abbr}</span>
                         <span className="text-muted-foreground">{book}</span>
                       </div>
@@ -840,7 +881,9 @@ export default function ConfiguracoesPage() {
               <Separator />
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Abreviações personalizadas</label>
+                <label className="text-sm font-medium">
+                  Abreviações personalizadas
+                </label>
                 <p className="text-sm text-muted-foreground">
                   Adicione abreviações específicas e associe a um livro.
                 </p>
@@ -868,17 +911,28 @@ export default function ConfiguracoesPage() {
                   </div>
                   <div className="max-h-52 overflow-auto border rounded-md p-3 text-sm">
                     {Object.keys(customAbbrevs).length === 0 ? (
-                      <p className="text-muted-foreground">Nenhuma abreviação personalizada</p>
+                      <p className="text-muted-foreground">
+                        Nenhuma abreviação personalizada
+                      </p>
                     ) : (
                       Object.entries(customAbbrevs)
                         .sort((a, b) => a[0].localeCompare(b[0]))
                         .map(([abbr, book]) => (
-                          <div key={abbr} className="flex items-center justify-between py-1">
+                          <div
+                            key={abbr}
+                            className="flex items-center justify-between py-1"
+                          >
                             <div className="flex items-center gap-3">
                               <span className="font-mono">{abbr}</span>
-                              <span className="text-muted-foreground">{book}</span>
+                              <span className="text-muted-foreground">
+                                {book}
+                              </span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => removeCustomAbbrev(abbr)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCustomAbbrev(abbr)}
+                            >
                               Remover
                             </Button>
                           </div>

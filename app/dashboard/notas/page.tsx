@@ -73,6 +73,7 @@ import {
   mergeTags,
 } from "@/lib/import-utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function NotasPage() {
   const router = useRouter();
@@ -406,13 +407,17 @@ export default function NotasPage() {
       try {
         // Processar múltiplos arquivos
         const fileArray = Array.from(files);
-        
+
         // Separar arquivos Markdown e JSON
-        const markdownFiles = fileArray.filter(file => 
-          file.name.toLowerCase().endsWith(".md") || file.type === "text/markdown"
+        const markdownFiles = fileArray.filter(
+          (file) =>
+            file.name.toLowerCase().endsWith(".md") ||
+            file.type === "text/markdown"
         );
-        const jsonFiles = fileArray.filter(file => 
-          file.name.toLowerCase().endsWith(".json") || file.type === "application/json"
+        const jsonFiles = fileArray.filter(
+          (file) =>
+            file.name.toLowerCase().endsWith(".json") ||
+            file.type === "application/json"
         );
 
         // Processar arquivos Markdown (múltiplos)
@@ -448,7 +453,7 @@ export default function NotasPage() {
         for (const file of jsonFiles) {
           const text = await file.text();
           const parsed = parseJSONFile(text);
-          
+
           if (Array.isArray(parsed)) {
             await Promise.all(
               parsed.map(async (n) => {
@@ -855,7 +860,7 @@ export default function NotasPage() {
   );
 
   return (
-    <div className="container sm:p-6 p-4 sm:max-w-[80vw] max-w-[100vw]">
+    <div className="container sm:p-6 p-4 sm:max-w-[100vw] max-w-[100vw]">
       {/* Header */}
       <PageHeader
         title="Notas"
@@ -1083,106 +1088,131 @@ export default function NotasPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className="columns-1 md:columns-2 lg:columns-3"
+          style={{ columnGap: "1rem" }}
+        >
           {/* Folders */}
-          {filteredFolders.map((folder) => (
-            <FolderCard
-              key={folder.id}
-              folder={folder}
-              noteCount={getNotesCountInFolder(folder.id)}
-              onOpen={handleOpenFolder}
-              onRename={handleRenameFolder}
-              onDelete={handleDeleteFolder}
-              syncPending={folderPendingById[folder.id]}
-              onDropNote={handleDropNoteToFolder}
-            />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filteredFolders.map((folder, idx) => (
+              <motion.div
+                key={folder.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 12 }}
+                transition={{ duration: 0.2, delay: idx * 0.03 }}
+                className="mb-4"
+                style={{ breakInside: "avoid" }}
+              >
+                <FolderCard
+                  folder={folder}
+                  noteCount={getNotesCountInFolder(folder.id)}
+                  onOpen={handleOpenFolder}
+                  onRename={handleRenameFolder}
+                  onDelete={handleDeleteFolder}
+                  syncPending={folderPendingById[folder.id]}
+                  onDropNote={handleDropNoteToFolder}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* Notes */}
-          {filteredNotes.map((note) => {
-            const isSelected = selectedNoteIds.has(note.id);
-            return (
-              <Card
-                key={note.id}
-                className={`relative cursor-pointer hover:shadow-md transition-shadow group ${
-                  isSelected ? "ring-2 ring-primary/50" : ""
-                } ${draggingNoteId === note.id ? "opacity-70" : ""}`}
-                draggable
-                onDragStart={(e) => handleNoteDragStart(note.id, e)}
-                onDragEnd={handleNoteDragEnd}
-                onClick={() =>
-                  selectionMode
-                    ? toggleSelectNote(note.id)
-                    : handleEditNote(note.id)
-                }
-              >
-                {/* Hover selection checkbox */}
-                <div
-                  className={`absolute top-2 left-2 z-10 ${
-                    isSelected
-                      ? ""
-                      : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
-                  }`}
+          <AnimatePresence mode="popLayout">
+            {filteredNotes.map((note, idx) => {
+              const isSelected = selectedNoteIds.has(note.id);
+              return (
+                <motion.div
+                  key={note.id}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2, delay: idx * 0.03 }}
+                  className="mb-4"
+                  style={{ breakInside: "avoid" }}
                 >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={(checked: boolean) => {
-                      toggleSelectNote(note.id, Boolean(checked));
-                    }}
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                  />
-                </div>
-                <CardHeader className="">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <SyncDot pending={notePendingById[note.id]} />
-                      {note.pinned && (
-                        <Pin
-                          className="h-4 w-4 text-amber-500"
-                          aria-label="Fixada"
-                        />
-                      )}
-                      <CardTitle className="text-md line-clamp-2 transition-colors">
-                        {note.title || "Nota sem título"}
-                      </CardTitle>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteNote(note.id);
+                  <Card
+                    className={`relative cursor-pointer hover:shadow-md transition-shadow group ${
+                      isSelected ? "ring-2 ring-primary/50" : ""
+                    } ${draggingNoteId === note.id ? "opacity-70" : ""}`}
+                    draggable
+                    onDragStart={(e) => handleNoteDragStart(note.id, e)}
+                    onDragEnd={handleNoteDragEnd}
+                    onClick={() =>
+                      selectionMode
+                        ? toggleSelectNote(note.id)
+                        : handleEditNote(note.id)
+                    }
+                  >
+                    {/* Hover selection checkbox */}
+                    <div
+                      className={`absolute top-2 left-2 z-10 ${
+                        isSelected
+                          ? ""
+                          : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked: boolean) => {
+                          toggleSelectNote(note.id, Boolean(checked));
                         }}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      />
+                    </div>
+                    <CardHeader className="">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <SyncDot pending={notePendingById[note.id]} />
+                          {note.pinned && (
+                            <Pin
+                              className="h-4 w-4 text-amber-500"
+                              aria-label="Fixada"
+                            />
+                          )}
+                          <CardTitle className="text-md line-clamp-2 transition-colors">
+                            {note.title || "Nota sem título"}
+                          </CardTitle>
+                        </div>
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span className="sr-only">Mais ações</span>⋮
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <DropdownMenuItem
-                            onClick={() => {
-                              // Ativa modo de seleção e seleciona esta nota
-                              setSelectionMode(true);
-                              toggleSelectNote(note.id, true);
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNote(note.id);
                             }}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                           >
-                            Selecionar
-                          </DropdownMenuItem>
-                          {/* <DropdownMenuItem
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="sr-only">Mais ações</span>⋮
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  // Ativa modo de seleção e seleciona esta nota
+                                  setSelectionMode(true);
+                                  toggleSelectNote(note.id, true);
+                                }}
+                              >
+                                Selecionar
+                              </DropdownMenuItem>
+                              {/* <DropdownMenuItem
                           onClick={() => {
                             const json = exportNotesAsJSON([note]);
                             downloadFile(
@@ -1194,67 +1224,69 @@ export default function NotasPage() {
                         >
                           Exportar (JSON)
                         </DropdownMenuItem> */}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const md = exportNotesAsMarkdown(
-                                [note],
-                                folders,
-                                tagsById
-                              );
-                              downloadFile(
-                                `${note.title || note.id}.md`,
-                                md,
-                                "text/markdown"
-                              );
-                            }}
-                          >
-                            Exportar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {getPreviewText(note.content)}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {/* Tags */}
-                  {(() => {
-                    const tagNames =
-                      note.tagIds && note.tagIds.length > 0
-                        ? note.tagIds.map(getTagNameById)
-                        : note.tags || [];
-                    return tagNames.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {tagNames.slice(0, 3).map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                        {tagNames.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{tagNames.length - 3}
-                          </Badge>
-                        )}
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const md = exportNotesAsMarkdown(
+                                    [note],
+                                    folders,
+                                    tagsById
+                                  );
+                                  downloadFile(
+                                    `${note.title || note.id}.md`,
+                                    md,
+                                    "text/markdown"
+                                  );
+                                }}
+                              >
+                                Exportar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    ) : null;
-                  })()}
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {getPreviewText(note.content)}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Tags */}
+                      {(() => {
+                        const tagNames =
+                          note.tagIds && note.tagIds.length > 0
+                            ? note.tagIds.map(getTagNameById)
+                            : note.tags || [];
+                        return tagNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {tagNames.slice(0, 3).map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                            {tagNames.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{tagNames.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
 
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {formatDate(note.updatedAt)}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="text-xs">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(note.updatedAt)}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
 
