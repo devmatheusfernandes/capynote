@@ -13,7 +13,7 @@ export default function BibleTextsCollectorPlugin() {
   const { setAllBibleTexts } = useEditorSidebar();
 
   useEffect(() => {
-    console.log("[BibleTextsCollector] plugin montado");
+    // console.log("[BibleTextsCollector] plugin montado");
     const cache = new Map<string, string>();
 
     const collectLinks = (): { key: string; text: string }[] => {
@@ -105,7 +105,7 @@ export default function BibleTextsCollectorPlugin() {
       links: { key: string; text: string }[]
     ) => {
       try {
-        console.log("[BibleTextsCollector] links encontrados:", links);
+        // console.log("[BibleTextsCollector] links encontrados:", links);
         const items: Item[] = [];
         for (const { key, text } of links) {
           const plain = text.replace(/\u00A0/g, " ");

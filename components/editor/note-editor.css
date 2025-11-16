@@ -8,7 +8,7 @@
   padding: 16px;
   width: min(100%, 1000px);
   max-width: 1000px;
-  margin-left: 24vw; /* Mantém o editor centralizado mesmo com sidebar aberto */
+  margin-left: 20vw; /* Mantém o editor centralizado mesmo com sidebar aberto */
   /* Em layouts com contêiner pai flex (col), impedir stretch e centralizar no eixo cruzado */
   align-self: center;
 }

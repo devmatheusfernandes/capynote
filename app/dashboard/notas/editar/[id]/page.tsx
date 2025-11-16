@@ -391,7 +391,7 @@ export default function EditNotePage() {
         {/* Content */}
         <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-12">
           {/* Editor */}
-          <div className="min-h-screen md:min-h-0 md:flex-1 pb-12">
+          <div className="min-h-screen md:min-h-0 md:flex-1 pb-">
             <NoteEditorWithToolbar
               placeholder="Comece a escrever sua nota..."
               onChange={handleContentChange}
