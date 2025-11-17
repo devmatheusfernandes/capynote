@@ -21,7 +21,7 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
-import NoteEditorWithToolbar from "@/components/editor/note-editor-with-toolbar";
+import IntegratedNoteEditor from "@/components/editor/integrated-note-editor";
 import { TagSelector } from "@/components/tag-selector";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
@@ -36,29 +36,22 @@ import {
 import { NoteData, TagData } from "@/types";
 import CapybaraLoader from "@/components/capybaraLoader";
 import { Badge } from "@/components/ui/badge";
-import SidebarEditorProvider from "@/components/editor/sidebar-editor-provider";
-import SidebarEditor from "@/components/editor/sidebar-editor";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import IntegratedEditorProvider from "@/components/editor/integrated-editor-provider";
+import IntegratedSidebar from "@/components/editor/integrated-sidebar";
+import IntegratedToolbar from "@/components/editor/integrated-toolbar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { motion } from "framer-motion";
 
-function HeaderOffset({
-  children,
-  showHeader,
-}: {
-  children: React.ReactNode;
-  showHeader: boolean;
-}) {
-  const { state, isMobile } = useSidebar();
-  const rightOffset = !isMobile && state === "expanded" ? "var(--sidebar-width)" : "0";
-
+function HeaderOffset({ children, showHeader, rightPadding }: { children: React.ReactNode; showHeader: boolean; rightPadding: number; }) {
   return (
-    <div
-      className={`flex-shrink-0 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 transition-[right,transform] duration-200 ease-linear fixed top-0 left-0 right-0 z-10 ${
-        showHeader ? "translate-y-0" : "-translate-y-full"
-      }`}
-      style={{ right: rightOffset }}
+    <motion.div
+      className={`flex-shrink-0 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 fixed top-0 left-0 right-0 z-10`}
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: showHeader ? 0 : -100, opacity: showHeader ? 1 : 0, paddingRight: rightPadding }}
+      transition={{ duration: 0.2 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -144,6 +137,7 @@ export default function EditNotePage() {
   const params = useParams();
   const noteId = params.id as string;
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -156,6 +150,7 @@ export default function EditNotePage() {
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [pendingWrites, setPendingWrites] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   // Load note from Firestore (real-time)
   useEffect(() => {
@@ -221,6 +216,17 @@ export default function EditNotePage() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  // Abrir sidebar automaticamente por eventos do editor
+  useEffect(() => {
+    const open = () => setSidebarOpen(true);
+    window.addEventListener("editor-open-sidebar", open);
+    window.addEventListener("editor-open-comment-dialog", open);
+    return () => {
+      window.removeEventListener("editor-open-sidebar", open);
+      window.removeEventListener("editor-open-comment-dialog", open);
+    };
+  }, []);
 
   // Auto-save functionality
   const saveNote = useCallback(async () => {
@@ -321,78 +327,33 @@ export default function EditNotePage() {
     );
   }
 
+  const reservedRight = !isMobile ? (sidebarOpen ? 352 : 0) : 0;
+
   return (
-    <SidebarEditorProvider noteId={noteId}>
-      {/* Right-side editor sidebar */}
-      <SidebarEditor />
-      <div className="min-h-screen md:h-screen md:flex md:flex-col">
+    <IntegratedEditorProvider noteId={noteId}>
+      <IntegratedSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      <motion.div className="min-h-screen md:h-screen md:flex md:flex-col" animate={{ paddingRight: reservedRight }} transition={{ duration: 0.2 }}>
         {/* Header próprio do editor: título + botão para abrir sheet */}
-        <HeaderOffset showHeader={showHeader}>
-          <div className="px-4 md:px-6 py-2">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.back()}
-                className="shrink-0"
-                aria-label="Voltar"
-                title="Voltar"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Voltar</span>
-              </Button>
-              <Input
-                placeholder="Título da nota..."
-                value={title}
-                onChange={handleTitleChange}
-                className="text-base md:text-lg font-medium border-0 px-2 md:px-3 py-1.5 focus-visible:ring-1 focus-visible:ring-primary bg-transparent hover:bg-muted/50 transition-colors"
-              />
-              <Badge
-                variant="outline"
-                className={`text-md ${
-                  pendingWrites ? " text-amber-600" : " text-emerald-700"
-                }`}
-                title={
-                  pendingWrites
-                    ? "Somente offline, aguardando upload"
-                    : "Sincronizado com o banco"
-                }
-              >
-                {pendingWrites ? (
-                  <SaveOff className="h-4 w-4" />
-                ) : (
-                  <SaveIcon className="h-4 w-4" />
-                )}
-              </Badge>
-              {/* Toggle custom editor sidebar */}
-              <SidebarTrigger aria-label="Abrir sidebar do editor" title="Barra lateral" />
-              {openReadMode ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => setOpenReadMode(false)}
-                >
-                  Sair
-                </Button>
-              ) : (
-                <EditorOptionsSheet
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                  onReadMode={() => setOpenReadMode(true)}
-                  selectedTags={tags}
-                  onTagsChange={handleTagsChange}
-                />
-              )}
-            </div>
-          </div>
+        <HeaderOffset showHeader={showHeader} rightPadding={reservedRight}>
+          <IntegratedToolbar
+            title={title}
+            onTitleChange={handleTitleChange}
+            pendingWrites={pendingWrites}
+            tags={tags}
+            onTagsChange={handleTagsChange}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            openReadMode={openReadMode}
+            setOpenReadMode={setOpenReadMode}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          />
         </HeaderOffset>
 
         {/* Content */}
         <div className="flex-1 md:flex md:flex-col md:overflow-hidden pt-12">
           {/* Editor */}
-          <div className="min-h-screen md:min-h-0 md:flex-1 pb-">
-            <NoteEditorWithToolbar
+          <div className="min-h-screen md:min-h-0 md:flex-1 pb-16">
+            <IntegratedNoteEditor
               placeholder="Comece a escrever sua nota..."
               onChange={handleContentChange}
               initialValue={content}
@@ -401,10 +362,11 @@ export default function EditNotePage() {
               openReadMode={openReadMode}
               onOpenReadMode={() => setOpenReadMode(true)}
               onCloseReadMode={() => setOpenReadMode(false)}
+              reservedRight={reservedRight}
             />
           </div>
         </div>
-      </div>
-    </SidebarEditorProvider>
+      </motion.div>
+    </IntegratedEditorProvider>
   );
 }

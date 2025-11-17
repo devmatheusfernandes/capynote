@@ -30,8 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import NoteEditorWithToolbar from "@/components/editor/note-editor-with-toolbar";
-import SidebarEditorProvider from "@/components/editor/sidebar-editor-provider";
-import SidebarEditor from "@/components/editor/sidebar-editor";
+import IntegratedEditorProvider from "@/components/editor/integrated-editor-provider";
 import { TagSelector } from "@/components/tag-selector";
 import { NoteData, FolderData, TagData } from "@/types";
 import { useAuth } from "@/contexts/auth-context";
@@ -342,9 +341,7 @@ export function NoteDrawer({
   }, [hasChanges, hasRealContent, saveNote, router, noteId, onOpenChange]);
 
   return (
-    <SidebarEditorProvider noteId={noteId}>
-      {/* Right-side editor sidebar (floating) */}
-      <SidebarEditor />
+    <IntegratedEditorProvider noteId={noteId}>
       <Drawer open={open} onOpenChange={handleClose}>
         <DrawerContent className="h-[85vh] flex flex-col">
         <DrawerHeader className="flex-shrink-0 border-b">
@@ -476,6 +473,6 @@ export function NoteDrawer({
           </AlertDialogContent>
         </AlertDialog>
       </Drawer>
-    </SidebarEditorProvider>
+    </IntegratedEditorProvider>
   );
 }

@@ -1,17 +1,9 @@
 "use client";
 
 import React from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-} from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 
 type Props = {
   children: React.ReactNode;
@@ -32,9 +24,7 @@ type EditorSidebarContextValue = {
   errorBiblePanel: (message: string) => void;
   clearBiblePanel: () => void;
   allBibleTexts: { key: string; title: string; content: string }[];
-  setAllBibleTexts: (
-    items: { key: string; title: string; content: string }[]
-  ) => void;
+  setAllBibleTexts: (items: { key: string; title: string; content: string }[]) => void;
   focusTextByKey: (key: string) => void;
   comments: {
     id: string;
@@ -74,45 +64,35 @@ type EditorSidebarContextValue = {
   clearCommentDraft: () => void;
 };
 
-const EditorSidebarContext =
-  React.createContext<EditorSidebarContextValue | null>(null);
+const EditorSidebarContext = React.createContext<EditorSidebarContextValue | null>(null);
 
-export function useEditorSidebar() {
+export function useIntegratedEditor() {
   const ctx = React.useContext(EditorSidebarContext);
-  if (!ctx)
-    throw new Error(
-      "useEditorSidebar must be used within SidebarEditorProvider"
-    );
+  if (!ctx) throw new Error("useIntegratedEditor must be used within IntegratedEditorProvider");
   return ctx;
 }
 
-export default function SidebarEditorProvider({ children, noteId }: Props) {
+export const useEditorSidebar = useIntegratedEditor;
+
+export default function IntegratedEditorProvider({ children, noteId }: Props) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = React.useState<
-    "texto" | "todos" | "comentarios"
-  >("texto");
-  const [activeCommentId, setActiveCommentId] = React.useState<string | null>(
-    null
-  );
+  const [activeTab, setActiveTab] = React.useState<"texto" | "todos" | "comentarios">("texto");
+  const [activeCommentId, setActiveCommentId] = React.useState<string | null>(null);
   const [bibleTitle, setBibleTitle] = React.useState<string | null>(null);
   const [bibleText, setBibleText] = React.useState<string | null>(null);
   const [bibleLoading, setBibleLoading] = React.useState<boolean>(false);
   const [bibleError, setBibleError] = React.useState<string | null>(null);
-  const [allBibleTexts, setAllBibleTexts] = React.useState<
-    { key: string; title: string; content: string }[]
-  >([]);
-  const [comments, setComments] = React.useState<
-    {
-      id: string;
-      anchorKey: string;
-      anchorOffset: number;
-      focusKey: string;
-      focusOffset: number;
-      excerpt: string;
-      text: string;
-      createdAt: number;
-    }[]
-  >([]);
+  const [allBibleTexts, setAllBibleTexts] = React.useState<{ key: string; title: string; content: string }[]>([]);
+  const [comments, setComments] = React.useState<{
+    id: string;
+    anchorKey: string;
+    anchorOffset: number;
+    focusKey: string;
+    focusOffset: number;
+    excerpt: string;
+    text: string;
+    createdAt: number;
+  }[]>([]);
   const [commentDraft, setCommentDraft] = React.useState<{
     anchorKey: string;
     anchorOffset: number;
@@ -121,17 +101,9 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
     excerpt: string;
   } | null>(null);
 
-  // Real-time subscription to comments stored alongside the note in Firestore
   React.useEffect(() => {
     if (!user?.id || !noteId) return;
-    const commentsRef = collection(
-      db,
-      "users",
-      user.id,
-      "notes",
-      noteId,
-      "comments"
-    );
+    const commentsRef = collection(db, "users", user.id, "notes", noteId, "comments");
     const unsub = onSnapshot(commentsRef, (snapshot) => {
       type CommentDoc = {
         anchorKey: string;
@@ -153,8 +125,7 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
             focusOffset: Number(data.focusOffset ?? 0),
             excerpt: data.excerpt ?? "",
             text: String(data.text ?? "").trim(),
-            createdAt:
-              typeof data.createdAt === "number" ? data.createdAt : Date.now(),
+            createdAt: typeof data.createdAt === "number" ? data.createdAt : Date.now(),
           };
         })
         .sort((a, b) => b.createdAt - a.createdAt);
@@ -203,9 +174,7 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
       text: string;
     }) => {
       if (!user?.id || !noteId) return;
-      const ref = doc(
-        collection(db, "users", user.id, "notes", noteId, "comments")
-      );
+      const ref = doc(collection(db, "users", user.id, "notes", noteId, "comments"));
       const payload = {
         anchorKey: data.anchorKey,
         anchorOffset: data.anchorOffset,
@@ -245,25 +214,22 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
     setComments([]);
   }, []);
 
-  const beginCommentDraft = React.useCallback(
-    (data: {
-      anchorKey: string;
-      anchorOffset: number;
-      focusKey: string;
-      focusOffset: number;
-      excerpt: string;
-    }) => {
-      setCommentDraft({
-        anchorKey: data.anchorKey,
-        anchorOffset: data.anchorOffset,
-        focusKey: data.focusKey,
-        focusOffset: data.focusOffset,
-        excerpt: data.excerpt,
-      });
-      setActiveTab("comentarios");
-    },
-    []
-  );
+  const beginCommentDraft = React.useCallback((data: {
+    anchorKey: string;
+    anchorOffset: number;
+    focusKey: string;
+    focusOffset: number;
+    excerpt: string;
+  }) => {
+    setCommentDraft({
+      anchorKey: data.anchorKey,
+      anchorOffset: data.anchorOffset,
+      focusKey: data.focusKey,
+      focusOffset: data.focusOffset,
+      excerpt: data.excerpt,
+    });
+    setActiveTab("comentarios");
+  }, []);
 
   const clearCommentDraft = React.useCallback(() => {
     setCommentDraft(null);
@@ -319,15 +285,5 @@ export default function SidebarEditorProvider({ children, noteId }: Props) {
     ]
   );
 
-  return (
-    <SidebarProvider
-      defaultOpen={false}
-      className="has-data-[variant=inset]:bg-transparent"
-      style={{ "--sidebar-width": "22rem" } as React.CSSProperties}
-    >
-      <EditorSidebarContext.Provider value={value}>
-        {children}
-      </EditorSidebarContext.Provider>
-    </SidebarProvider>
-  );
+  return <EditorSidebarContext.Provider value={value}>{children}</EditorSidebarContext.Provider>;
 }

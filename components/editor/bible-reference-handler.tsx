@@ -5,13 +5,11 @@ import { normalizeBookToken, setCustomAbbreviations } from "@/lib/bible-abbrevia
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-import { useSidebar } from "@/components/ui/sidebar";
-import { useEditorSidebar } from "./sidebar-editor-provider";
+import { useEditorSidebar } from "./integrated-editor-provider";
 import { parseAllReferences } from "./utils/bible-parse";
 
 
 export default function BibleReferenceHandler() {
-  const { state, isMobile, openMobile, setOpenMobile, setOpen } = useSidebar();
   const { beginBiblePanel, finishBiblePanel, errorBiblePanel } = useEditorSidebar();
   const router = useRouter();
   const { user } = useAuth();
@@ -37,6 +35,9 @@ export default function BibleReferenceHandler() {
       // Apenas links bíblicos (marcados pelo autolink com href começando em #bible)
       const href = (anchor as HTMLAnchorElement).getAttribute("href") || "";
       if (!href.startsWith("#bible")) return;
+      // Garante que o clique veio de dentro do editor
+      const insideEditor = (anchor as HTMLElement).closest(".editor-inner");
+      if (!insideEditor) return;
       const raw = anchor.textContent || "";
       const text = raw.replace(/\u00A0/g, " "); // normaliza NBSP
       const infos = parseAllReferences(text);
@@ -62,12 +63,11 @@ export default function BibleReferenceHandler() {
         return base;
       })();
       beginBiblePanel(title);
-      // Garantir que a sidebar esteja visível
-      if (isMobile) {
-        if (!openMobile) setOpenMobile(true);
-      } else {
-        if (state !== "expanded") setOpen(true);
-      }
+      // Solicita abertura da sidebar do editor
+      try {
+        window.dispatchEvent(new CustomEvent("editor-open-sidebar"));
+      } catch {}
+      // A abertura do painel é controlada pelo componente de sidebar integrado
       try {
         const parts: string[] = [];
         for (const info of infos) {
@@ -131,14 +131,12 @@ export default function BibleReferenceHandler() {
         // loading é controlado pelo contexto
       }
     };
-    // captura clicks dentro do editor
-    const container = document.querySelector<HTMLElement>(".editor-inner");
-    if (!container) return;
+    // Delegação global: captura cliques e filtra por elementos dentro do editor
     const wrappedListener: EventListener = (evt) => {
       void handleClick(evt as MouseEvent);
     };
-    container.addEventListener("click", wrappedListener);
-    return () => container.removeEventListener("click", wrappedListener);
+    document.addEventListener("click", wrappedListener, true);
+    return () => document.removeEventListener("click", wrappedListener, true);
   }, []);
 
   return null;

@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getRoot, $getNodeByKey, ElementNode, LexicalNode } from "lexical";
-import { useEditorSidebar } from "../sidebar-editor-provider";
+import { useEditorSidebar } from "../integrated-editor-provider";
 import { parseAllReferences, formatReferenceTitle } from "../utils/bible-parse";
 
 type Item = { key: string; title: string; content: string };

@@ -30,7 +30,6 @@ import { useCallback, useEffect, useState, useRef, Fragment } from "react";
 import { $isTextNode } from "lexical";
 import type { CSSProperties, JSX, ComponentType } from "react";
 import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -466,11 +465,12 @@ function useKeyboardOffset() {
 
 export default function Toolbar({
   onToggleReadMode,
+  reservedRight = 0,
 }: {
   onToggleReadMode?: () => void;
+  reservedRight?: number;
 }) {
-  const { state, isMobile } = useSidebar();
-  const sidebarExpanded = !isMobile && state === "expanded";
+  const sidebarExpanded = reservedRight > 0;
   const [editor] = useLexicalComposerContext();
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
@@ -751,14 +751,9 @@ export default function Toolbar({
       className={`toolbar-container ${
         hasOverflow && isExpanded ? "expanded" : ""
       }`}
-      style={
-        {
-          "--kb-offset": `${keyboardOffset}px`,
-          right: sidebarExpanded ? "var(--sidebar-width)" : 0,
-        } as CSSProperties
-      }
+      style={{ "--kb-offset": `${keyboardOffset}px` } as CSSProperties}
       initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={{ y: 0, opacity: 1, right: reservedRight }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <div ref={contentRef} className="toolbar-content">

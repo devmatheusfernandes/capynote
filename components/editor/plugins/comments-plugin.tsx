@@ -3,7 +3,7 @@
 import React from "react"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { $getSelection, $isRangeSelection, $isTextNode, $isElementNode, $getNodeByKey, LexicalNode, TextNode } from "lexical"
-import { useEditorSidebar } from "../sidebar-editor-provider"
+import { useEditorSidebar } from "../integrated-editor-provider"
 
 // Este plugin apenas captura a seleção e inicia o rascunho no sidebar
 export default function CommentsPlugin() {

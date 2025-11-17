@@ -14,7 +14,7 @@ import {
   LexicalNode,
 } from "lexical"
 import { $patchStyleText } from "@lexical/selection"
-import { useEditorSidebar } from "../sidebar-editor-provider"
+import { useEditorSidebar } from "../integrated-editor-provider"
 
 function removeHighlightStyle(orig: string | null | undefined) {
   const entries = (orig || "")
@@ -149,6 +149,15 @@ export default function CommentsHighlightsPlugin() {
   React.useEffect(() => {
     applyHighlights()
   }, [applyHighlights])
+
+  React.useEffect(() => {
+    const unsubscribe = editor.registerUpdateListener(() => {
+      applyHighlights()
+    })
+    return () => {
+      unsubscribe()
+    }
+  }, [editor, applyHighlights])
 
   React.useEffect(() => {
     const rootEl = editor.getRootElement()
